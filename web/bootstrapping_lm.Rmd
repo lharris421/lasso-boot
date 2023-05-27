@@ -1,0 +1,7 @@
+---
+title: "Bootstrapping:: lm"
+---
+
+```{r setup, child = 'web/_include/setup.rmd'}
+```
+

@@ -1,0 +1,14 @@
+---
+title: "Dissertation work"
+output: 
+prettydoc::html_pretty:
+  theme: architect
+  highlight: github
+  toc: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+General overview of direction? Private or public?

@@ -1,0 +1,17 @@
+Package: dissertation
+Title: Work for Logan Harris' dissertation
+Version: 0.0.1
+Date: 2023-05-27
+Authors@R: person("Logan", "Harris", role=c("aut","cre"), email="logan-harris@uiowa.edu")
+Description: More ideas on what to focus on.
+Depends:
+  data.table,
+  ggplot2,
+  magrittr,
+  dplyr,
+  stringr
+License: GPL-3
+LazyData: TRUE
+VignetteBuilder: knitr
+Encoding: UTF-8
+RoxygenNote: 7.2.3
