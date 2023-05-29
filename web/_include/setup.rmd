@@ -1,12 +1,11 @@
 ```{r knitr_setup, include=FALSE, purl=FALSE}
 library(knitr)
 library(kableExtra)
-set.seed(1)
-knitr::opts_knit$set(
-  aliases = c(h = 'fig.height', w = 'fig.width'),
-  width = 75)
+library(ncvreg) ## devtools::install_github("https://github.com/pbreheny/ncvreg/tree/bootstrap")
+library(dplyr)
+set.seed(1234)
 knitr::opts_chunk$set(
-  cache=FALSE, 
+  cache = FALSE, 
   collapse = TRUE,
   comment = "#",
   echo = FALSE,
@@ -14,9 +13,7 @@ knitr::opts_chunk$set(
   message = FALSE,
   tidy = FALSE,
   warning = FALSE)
-knitr::knit_hooks$set(small.mar = function(before, options, envir) {
-  if (before) par(mar = c(4, 4, .1, .1))
-})
+
 devtools::load_all(quiet = TRUE)
 ```
 
@@ -28,7 +25,7 @@ $(function() {
 
 ::: {.footer}
 <div class="container" style="max-width: 1200px; border-top: 1px solid #cccccc">
-  <span class="text-muted">By Logan Harris</span>
+  <span class="text-muted">By Logan Harris, Advised by Patrick Breheny</span>
   <span class="text-muted" style="float: right">`r paste0("Last updated ", format(Sys.time(), format="%Y-%m-%d %R"))`</span>
 </div>
 :::

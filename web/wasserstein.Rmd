@@ -5,22 +5,136 @@ title: "Wasserstein"
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
-## R Markdown
+# Setup
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+While looking information on Wasserstein distance and potential implementations in R, I came across the package. Here, we see an example passing in observations from two normal distributions.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r}
+## Load library for wasserstein distnace (emperical approximation)
+## devtools::install_bioc("waddR")
+library(waddR)
 
-```{r cars}
-summary(cars)
+## Generate from two normals
+set.seed(24)
+x <- rnorm(10000,mean=0,sd=1)
+y <- rnorm(10000,mean=2,sd=1)
 ```
 
-## Including Plots
+## waddR
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+## Example of the wasserstein implementation
+wasserstein_metric(x,y,p=2)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+However, the implementation seems to rely heavily on the first two moments... which is great if the two distributions are normal, but worries me a bit in the case I am trying to apply it to. With a little thought, I took the conceptual idea (moving pieces of sand) and wondered why we couldn't just order the observations and then match up the ordered observations between two distributions and compute the mean absolute distance between the paired points. I.e. I am asking, "how far, on average, do we have to move the points of one distribution to create the other distribution?" What isn't yet clear to me is if this would give us the minimum amount of movement needed...
+
+## My ideas
+
+```{r}
+## My idea
+proxy_dist <- function(dist1, dist2) mean(abs(sort(dist1) - sort(dist2)))
+proxy_dist(x, y) ## Converge in the limit for normal example
+
+## Function for mixture distribution
+discrete_mixture <- function(p_zero = .8, scale = 1, n = 1e5) {
+  
+  swtch <- runif(n)
+  lap_draws <- rlaplace(n, location = 0, scale = scale)
+  ifelse(swtch <= p_zero, 0, lap_draws)
+    
+}
+```
+
+# Laplace Distribution
+
+Before continuing, I need to get a better understanding of the lapalce distribution as well as have a way to generate this distribution as well as a mixture distribution which contains a point mass on zero.
+
+```{r}
+## Look at what the different scale values do to the double exponential
+library(VGAM)
+
+## Prior ... changing scale looks the same to me
+prior <- rlaplace(n = 100000, location = 0, scale = 10)
+plot(density(prior, bw = 10 / 1000), col = "red")
+
+prior <- rlaplace(n = 100000, location = 0, scale = .01)
+plot(density(prior, bw = .01 / 1000), col = "red")
+```
+
+Next we can see an example of the mixture.
+
+```{r}
+## Examples using function
+truth <- discrete_mixture(n = 100000)
+plot(density(truth, bw = .001, weights = (truth !=0) / sum(truth !=0)), col = "red", ylim = c(0, 20))
+lines(density(truth, bw = .001, weights = (truth == 0) / sum(truth == 0)), col = "red")
+```
+
+And we can see what the two densities look like together (at least in a relative sense):
+
+```{r}
+prior <- rlaplace(n = 100000, location = 0, scale = 1)
+plot(density(truth, bw = .001, weights = (truth !=0) / sum(truth !=0)), col = "red", ylim = c(0, 20))
+lines(density(truth, bw = .001, weights = (truth == 0) / sum(truth == 0)), col = "red")
+lines(density(prior, bw = .001), col = "blue")
+```
+
+## Comparisons
+
+Here, I will only be adjusting the "truth", the "prior" will stay at a lapalce with scale = 1.
+
+```{r}
+sz <- 100000
+truth <- discrete_mixture(n = sz)
+prior <- rlaplace(n = sz, location = 0, scale = 1)
+proxy_dist(prior, truth)
+wasserstein_metric(truth,prior,p=2)
+```
+
+
+I really want to see if the function I created agrees with the wasserstein function.
+
+If we set the scale to 2 for the "truth", both metric decrease. This is an interesting relationship that I wasn't necessarily expecting. That is, a scale increase for the mixture causes interesting behavior.
+
+```{r}
+## Set scale to 2 for truth (both decrease)
+truth <- discrete_mixture(n = sz, scale = 2)
+proxy_dist(prior, truth)
+wasserstein_metric(truth,prior,p=2)
+```
+
+If we change pzero to be .7, as expected, both decrease.
+
+```{r}
+## Set pzero to .7 for truth (both decrease)
+truth <- discrete_mixture(n = sz, scale = 1, p_zero = .7)
+proxy_dist(prior, truth)
+wasserstein_metric(truth,prior,p=2)
+```
+
+If we set the "truth" to be equal to the prior, we see that both metric produce values near zero.
+
+```{r}
+truth <- discrete_mixture(n = sz, scale = 1, p_zero = 0)
+proxy_dist(prior, truth)
+wasserstein_metric(truth,prior,p=2)
+```
+
+From here, we can increase the scale, and here we see the expected relation with an increase in the metrics.
+
+```{r}
+truth <- discrete_mixture(n = sz, scale = 2, p_zero = 0)
+proxy_dist(prior, truth)
+wasserstein_metric(truth,prior,p=2)
+```
+
+We can observe the phenomenon we save before and decrease the distances between the distributions by adding mass at zero. 
+
+```{r}
+## Now add mass at zero... they both decrease
+truth <- discrete_mixture(n = sz, scale = 2, p_zero = .5)
+proxy_dist(prior, truth)
+wasserstein_metric(truth,prior,p=2)
+```
+

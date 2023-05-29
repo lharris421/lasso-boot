@@ -5,3 +5,125 @@ title: "Bootstrapping:: lm"
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
+Just a sanity check...
+
+First, I define the equivalent functions based on what I was previously using.
+
+```{r}
+boot <- function(y, X, R = 1000, type = c("case", "residual"), seed, progress = TRUE) {
+  
+  
+  orig_fit <- lm(y ~ X)
+  
+  ## Object to hold results
+  res <- matrix(nrow = R, ncol = ncol(X))
+  
+  if (progress) pb <- txtProgressBar(1, R, style=3)
+  
+  type <- match.arg(type)
+  if (type == "case") {
+    for (i in 1:R) {
+      idx <- sample(length(y), replace = TRUE)
+      y_star <- y[idx]; X_star <- X[idx,]
+      fit <- lm(y_star ~ X_star)
+      res[i,] <- fit$coefficients[-1]
+      if (progress) setTxtProgressBar(pb, i)
+    }
+  } else if (type == "residual") {
+    mu <- orig_fit$fitted.values
+    r <- y - mu
+    for (i in 1:R) {
+      y_star <- mu + sample(r, size = length(r), replace = TRUE) ## mu not y
+      fit <- lm(y_star ~ X)
+      res[i,] <- fit$coefficients[-1]
+      if (progress) setTxtProgressBar(pb, i)
+    }
+  }
+  
+  ret <- list(samples = res, fit = orig_fit)
+  class(ret) <- "boot"
+  
+  return(ret)
+  
+}
+
+boot_ci <- function(boot_res, type = c("percentile", "normal"), coverage = .95, recenter = FALSE, robust = FALSE) {
+  
+  if (coverage >= 1 | coverage <= 0) stop("Please provide a coverage between 0 and 1")
+  lower <- (1 - coverage) / 2
+  upper <- (1 + coverage) / 2
+  
+  estimate <- boot_res$fit$coefficients[-1]
+  
+  type <- match.arg(type)
+  if (type == "percentile") {
+    res <- apply(boot_res$samples, 2, function(x) quantile(x, c(lower, upper)))
+  } else {
+    sds <- apply(boot_res$samples, 2, sd)
+    if (recenter) {
+      if (robust) {
+        estimate <- apply(boot_res$samples, 2, median)  
+      } else {
+        estimate <- apply(boot_res$samples, 2, mean)
+      }
+      
+    }
+    res <- mapply(function(x, y) x + c(-1, 1)*qnorm(upper, lower.tail = TRUE)*y, estimate, sds)
+  }
+  
+  ci <- data.frame(estimate, t(res))
+  colnames(ci) <- c("estimate", "lower", "upper")
+  class(ci) <- c("boot_ci", "data.frame")
+  
+  return(ci)
+  
+}
+
+library(ggplot2)
+plot.boot_ci <- function(boot_ci, n = 10) {
+  
+  plot_res <- boot_ci %>%
+    dplyr::arrange(desc(abs(estimate))) %>%
+    head(n)
+  
+  plot_res$grp <- rownames(plot_res)
+  
+  plot_res %>%
+    ggplot() +
+    geom_point(aes(x = estimate, y = grp)) +
+    geom_errorbar(aes(xmin = lower, xmax = upper, y = grp)) +
+    theme_bw()
+  
+}
+```
+
+```{r}
+library(hdrm)
+tmp_dat <- genDataABN(n=1000, p=30, a=6, b=2, rho=0.5, beta=c(1,-1,0.5,-0.5,0.5,-0.5))
+X <- tmp_dat$X
+y <- tmp_dat$y
+```
+
+```{r}
+lm_boot <- boot(y, X, seed = 1234) ## Pairs
+ci <- boot_ci(lm_boot)
+
+lm_boot2 <- boot(y, X, seed = 1234, type = "residual")
+ci2 <- boot_ci(lm_boot2)
+
+mod <- lm(y ~ X) ## Regular lm
+interval <- confint(mod)
+ci3 <- data.frame(
+  estimate = coef(mod)[-1],
+  lower = interval[-1,1],
+  upper = interval[-1,2]
+)
+class(ci3) <- c("boot_ci", "data.frame")
+```
+
+
+```{r}
+plot.boot_ci(ci)
+plot.boot_ci(ci2)
+plot.boot_ci(ci3)
+```
