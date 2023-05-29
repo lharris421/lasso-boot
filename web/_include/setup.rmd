@@ -15,6 +15,7 @@ knitr::opts_chunk$set(
   warning = FALSE)
 
 devtools::load_all(quiet = TRUE)
+progress <- FALSE
 ```
 
 ```{js, echo=FALSE}

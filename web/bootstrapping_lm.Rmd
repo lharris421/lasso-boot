@@ -10,7 +10,7 @@ Just a sanity check...
 First, I define the equivalent functions based on what I was previously using.
 
 ```{r}
-boot <- function(y, X, R = 1000, type = c("case", "residual"), seed, progress = TRUE) {
+boot <- function(y, X, R = 1000, type = c("case", "residual"), seed, progress = FALSE) {
   
   
   orig_fit <- lm(y ~ X)

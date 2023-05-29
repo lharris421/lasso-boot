@@ -44,7 +44,7 @@ plot(y, resid)
 ## Pairs
 
 ```{r}
-tmp <- boot_ncvreg(hiv_fit, lambda = 0.001964070, R = 100, seed = 1234)
+tmp <- boot_ncvreg(hiv_fit, lambda = 0.001964070, R = 100, seed = 1234, progress = progress)
 tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
 plot(tmp_boot_ci, n = 20)
 ```
@@ -52,7 +52,7 @@ plot(tmp_boot_ci, n = 20)
 ## Residual
 
 ```{r}
-tmp <- boot_ncvreg(hiv_fit, lambda = 0.001964070, R = 100, type = "residual", seed = 12345)
+tmp <- boot_ncvreg(hiv_fit, lambda = 0.001964070, R = 100, type = "residual", seed = 12345, progress = progress)
 tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
 plot(tmp_boot_ci, n = 20)
 ```
@@ -60,7 +60,7 @@ plot(tmp_boot_ci, n = 20)
 ## Parametric
 
 ```{r}
-tmp <- boot_ncvreg(hiv_cv, lambda = 0.001964070, R = 100, type = "parametric", seed = 1234)
+tmp <- boot_ncvreg(hiv_cv, lambda = 0.001964070, R = 100, type = "parametric", seed = 1234, progress = progress)
 tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
 plot(tmp_boot_ci, n = 20)
 ```
@@ -87,7 +87,7 @@ plot(tmp_fit$y, resid)
 ## Bootstrap: Residual
 
 ```{r}
-boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "residual")
+boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "residual", progress = progress)
 boot_ci <- boot_ci_ncvreg(boot, type = "percentile")
 plot(boot_ci, n = 10)
 ```
@@ -95,7 +95,7 @@ plot(boot_ci, n = 10)
 # Run "pairs" bootstrap
 
 ```{r}
-boot_pairs <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100)
+boot_pairs <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, progress = progress)
 boot_ci_pairs <- boot_ci_ncvreg(boot_pairs, type = "percentile")
 plot(boot_ci_pairs, n = 60)
 ```
