@@ -6,14 +6,13 @@ library(dplyr)
 set.seed(1234)
 knitr::opts_chunk$set(
   cache = FALSE, 
-  collapse = TRUE,
+  collapse = FALSE,
   comment = "#",
-  echo = FALSE,
+  echo = TRUE,
   fig.align="center",
   message = FALSE,
   tidy = FALSE,
   warning = FALSE)
-
 devtools::load_all(quiet = TRUE)
 progress <- FALSE
 ```

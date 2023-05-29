@@ -1,5 +1,5 @@
 ---
-title: "Bootstrapping:: lm"
+title: "Bootstrapping: lm"
 ---
 
 ```{r setup, child = 'web/_include/setup.rmd'}
@@ -7,10 +7,12 @@ title: "Bootstrapping:: lm"
 
 Just a sanity check...
 
+# Define functions
+
 First, I define the equivalent functions based on what I was previously using.
 
 ```{r}
-boot <- function(y, X, R = 1000, type = c("case", "residual"), seed, progress = FALSE) {
+boot <- function(y, X, R = 1000, type = c("pairs", "residual"), seed, progress = FALSE) {
   
   
   orig_fit <- lm(y ~ X)
@@ -21,7 +23,7 @@ boot <- function(y, X, R = 1000, type = c("case", "residual"), seed, progress = 
   if (progress) pb <- txtProgressBar(1, R, style=3)
   
   type <- match.arg(type)
-  if (type == "case") {
+  if (type == "pairs") {
     for (i in 1:R) {
       idx <- sample(length(y), replace = TRUE)
       y_star <- y[idx]; X_star <- X[idx,]
@@ -79,23 +81,29 @@ boot_ci <- function(boot_res, type = c("percentile", "normal"), coverage = .95, 
   
 }
 
-library(ggplot2)
 plot.boot_ci <- function(boot_ci, n = 10) {
+
+  boot_ci <- boot_ci[order(-abs(boot_ci$estimate)), ]
+  plot_res <- head(boot_ci, n)
   
-  plot_res <- boot_ci %>%
-    dplyr::arrange(desc(abs(estimate))) %>%
-    head(n)
+  # Create the plot
+  nms <- rownames(plot_res)
+  plot_res$grp <- as.numeric(as.factor(nms))
   
-  plot_res$grp <- rownames(plot_res)
-  
-  plot_res %>%
-    ggplot() +
-    geom_point(aes(x = estimate, y = grp)) +
-    geom_errorbar(aes(xmin = lower, xmax = upper, y = grp)) +
-    theme_bw()
+  par(mar = c(2, 2, 1, 1))
+  plot(x = plot_res$estimate, y = plot_res$grp, 
+       pch = 16, xlab = "Estimate", ylab = "Group", xlim = c(min(plot_res$lower), max(plot_res$upper)), yaxt = "n")
+       
+  # Add error bars
+  arrows(x0 = plot_res$lower, y0 = plot_res$grp, x1 = plot_res$upper, y1 = plot_res$grp, code = 3, angle = 90, length = 1/n, lwd = 1.5)
+  axis(2, labels = unique(nms), at = unique(plot_res$grp), cex.axis = .5)
   
 }
 ```
+
+# Simulation
+
+## Set up
 
 ```{r}
 library(hdrm)
@@ -103,6 +111,8 @@ tmp_dat <- genDataABN(n=1000, p=30, a=6, b=2, rho=0.5, beta=c(1,-1,0.5,-0.5,0.5,
 X <- tmp_dat$X
 y <- tmp_dat$y
 ```
+
+## Model fitting
 
 ```{r}
 lm_boot <- boot(y, X, seed = 1234) ## Pairs
@@ -122,8 +132,22 @@ class(ci3) <- c("boot_ci", "data.frame")
 ```
 
 
+## Plots
+
+### Pairs
+
 ```{r}
 plot.boot_ci(ci)
+```
+
+### Residual
+
+```{r}
 plot.boot_ci(ci2)
+```
+
+### lm
+
+```{r}
 plot.boot_ci(ci3)
 ```

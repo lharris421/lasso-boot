@@ -7,7 +7,7 @@ title: "Bootstrapping: ncvreg"
 
 ## TO DO
 
-- Compare to other methods
+- Compare to other methods (subsampling, selective inference)
 - Investigate why simulation is different from real data example...
 
 # Set up test data
@@ -84,15 +84,9 @@ resid <- tmp_fit$y - predict(tmp_fit, lambda = cv_fit$lambda.min, X = tmp_dat$X)
 plot(tmp_fit$y, resid)
 ```
 
-## Bootstrap: Residual
+## Examples
 
-```{r}
-boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "residual", progress = progress)
-boot_ci <- boot_ci_ncvreg(boot, type = "percentile")
-plot(boot_ci, n = 10)
-```
-
-# Run "pairs" bootstrap
+### Bootstrap: Pairs
 
 ```{r}
 boot_pairs <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, progress = progress)
@@ -100,7 +94,25 @@ boot_ci_pairs <- boot_ci_ncvreg(boot_pairs, type = "percentile")
 plot(boot_ci_pairs, n = 60)
 ```
 
+### Bootstrap: Residual
+
+```{r}
+boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "residual", progress = progress)
+boot_ci <- boot_ci_ncvreg(boot, type = "percentile")
+plot(boot_ci, n = 60)
+```
+
+### Bootstrap: Parametric
+
+```{r}
+boot_para <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "parametric", progress = progress)
+boot_ci_para <- boot_ci_ncvreg(boot_para, type = "percentile")
+plot(boot_ci_para, n = 60)
+```
+
 ## Run simulation
+
+### Define functions
 
 ```{r}
 sim <- function(type1, type2, recenter = FALSE, robust = FALSE,
@@ -170,8 +182,10 @@ eval_scenario <- function(type1, type2, recenter = FALSE, robust = FALSE,
 }
 ```
 
-Previous work I have done showed that the method for computing intervals seemed less important that the method used for the bootstrap. I may revisit this later, but for now I am focusing on the different methods for bootstrapping. 
 
+### Initial
+
+Previous work I have done showed that the method for computing intervals seemed less important that the method used for the bootstrap. I may revisit this later, but for now I am focusing on the different methods for bootstrapping. 
 
 ```{r}
 p <- 60
@@ -180,11 +194,27 @@ b <- 2
 betas <- c(1,-1,0.5,-0.5,0.5,-0.5)
 a <- length(betas)
 all_betas <- c(betas, rep(0, p - a))
+```
 
-eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+#### Pairs
+
+```{r}
 eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
 ```
+
+#### Residual
+
+```{r}
+eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+```
+
+#### Parametric
+
+```{r}
+eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+```
+
+### Larger N
 
 What happens if under the same conditions we increase the sample size?
 
@@ -192,14 +222,29 @@ Everything seems to be working here...
 
 ```{r}
 n <- 500
+```
 
-eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+#### Pairs
+
+```{r}
 eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
 ```
 
+#### Residual
 
-## Increasing value of beta
+```{r}
+eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+```
+
+#### Parametric
+
+```{r}
+eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+```
+
+
+
+### Increasing values of betas
 
 ```{r}
 p <- 100
@@ -208,18 +253,46 @@ b <- 2
 betas <- c(5, -4.5, 4, -3.5, 3, -2.5, 2, -1.5, 1, -.5)
 a <- length(betas)
 all_betas <- c(betas, rep(0, p - a))
+```
 
-eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+#### Pairs
+
+```{r}
 eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
 ```
 
-## Small lambda value
+#### Residual
+
+```{r}
+eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+```
+
+#### Parametric
+
+```{r}
+eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+```
+
+### Small lambda value
 
 ```{r}
 lambda_index = 100
+```
 
-eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda_index = lambda_index)
-eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda_index = lambda_index)
-eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda_index = lambda_index)
+#### Pairs
+
+```{r}
+eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+```
+
+#### Residual
+
+```{r}
+eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+```
+
+#### Parametric
+
+```{r}
+eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
 ```

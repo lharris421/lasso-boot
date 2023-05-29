@@ -56,10 +56,10 @@ library(VGAM)
 
 ## Prior ... changing scale looks the same to me
 prior <- rlaplace(n = 100000, location = 0, scale = 10)
-plot(density(prior, bw = 10 / 1000), col = "red")
+plot(density(prior, bw = 10 / 1000), col = "red", main = "")
 
 prior <- rlaplace(n = 100000, location = 0, scale = .01)
-plot(density(prior, bw = .01 / 1000), col = "red")
+plot(density(prior, bw = .01 / 1000), col = "red", main = "")
 ```
 
 Next we can see an example of the mixture.
@@ -67,16 +67,16 @@ Next we can see an example of the mixture.
 ```{r}
 ## Examples using function
 truth <- discrete_mixture(n = 100000)
-plot(density(truth, bw = .001, weights = (truth !=0) / sum(truth !=0)), col = "red", ylim = c(0, 20))
-lines(density(truth, bw = .001, weights = (truth == 0) / sum(truth == 0)), col = "red")
+plot(density(truth, bw = .001, weights = (truth !=0) / length(truth)), col = "red", ylim = c(0, 20), main = "")
+lines(density(truth, bw = .001, weights = (truth == 0) / length(truth)), col = "red")
 ```
 
 And we can see what the two densities look like together (at least in a relative sense):
 
 ```{r}
+plot(density(truth, bw = .001, weights = (truth !=0) / length(truth)), col = "red", ylim = c(0, 20), main = "")
+lines(density(truth, bw = .001, weights = (truth == 0) / length(truth)), col = "red")
 prior <- rlaplace(n = 100000, location = 0, scale = 1)
-plot(density(truth, bw = .001, weights = (truth !=0) / sum(truth !=0)), col = "red", ylim = c(0, 20))
-lines(density(truth, bw = .001, weights = (truth == 0) / sum(truth == 0)), col = "red")
 lines(density(prior, bw = .001), col = "blue")
 ```
 
