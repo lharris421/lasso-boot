@@ -5,9 +5,8 @@ title: "Bootstrapping: ncvreg"
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
-## TO DO
+## To-do
 
-- Compare to other methods (subsampling, selective inference)
 - Investigate why simulation is different from real data example...
 
 # Set up test data
@@ -72,6 +71,7 @@ plot(tmp_boot_ci, n = 20)
 
 ```{r}
 library(hdrm)
+set.seed(1234)
 tmp_dat <- genDataABN(n=100, p=60, a=6, b=2, rho=0.5, beta=c(1,-1,0.5,-0.5,0.5,-0.5))
 cv_fit <- cv.ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")
 ```
@@ -91,7 +91,7 @@ plot(tmp_fit$y, resid)
 ```{r}
 boot_pairs <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, progress = progress)
 boot_ci_pairs <- boot_ci_ncvreg(boot_pairs, type = "percentile")
-plot(boot_ci_pairs, n = 60)
+plot(boot_ci_pairs, n = 10)
 ```
 
 ### Bootstrap: Residual
@@ -99,7 +99,7 @@ plot(boot_ci_pairs, n = 60)
 ```{r}
 boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "residual", progress = progress)
 boot_ci <- boot_ci_ncvreg(boot, type = "percentile")
-plot(boot_ci, n = 60)
+plot(boot_ci, n = 10)
 ```
 
 ### Bootstrap: Parametric
@@ -107,7 +107,7 @@ plot(boot_ci, n = 60)
 ```{r}
 boot_para <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "parametric", progress = progress)
 boot_ci_para <- boot_ci_ncvreg(boot_para, type = "percentile")
-plot(boot_ci_para, n = 60)
+plot(boot_ci_para, n = 10)
 ```
 
 ## Run simulation

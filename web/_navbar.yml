@@ -6,3 +6,5 @@ left:
     href: bootstrapping_lm.html
   - text: "Wasserstein Distance"
     href: wasserstein.html
+  - text: "In Progress"
+    href: "playground.html"

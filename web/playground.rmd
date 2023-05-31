@@ -1,0 +1,69 @@
+---
+title: "Playground"
+---
+
+```{r setup, child = 'web/_include/setup.rmd'}
+```
+
+# Other Methods
+
+## Selective Inference
+
+### Real Data Application
+
+```{r}
+library(selectiveInference)
+
+# Set up test data
+hiv <- readRDS(url('https://s3.amazonaws.com/pbreheny-data-sets/Rhee2006.rds'))
+
+y <- hiv$y
+X <- hiv$X ## 361
+
+## Get variables that are duplicated or constant
+dup <- duplicated(t(X))
+const <- apply(X, 2, function(x) length(unique(x)) == 1)
+
+X <- X[,!dup & !const] ## 331
+X.std <- std(X)
+
+## Run cross validation
+hiv_cv <- cv.glmnet(X.std, y)
+hiv_fit <- hiv_cv$glmnet.fit
+
+## Get CI
+lam <- hiv_cv$lambda.min
+n <- length(y)
+b <- coef(hiv_fit, s = lam)[-1]
+res <- fixedLassoInf(X.std, y, b, lam*n, sigma=1)
+bb <- res$vmat %*% y
+B <- cbind(bb, res$ci)
+dimnames(B) <- list(names(res$vars), c('estimate', 'lower', 'upper'))
+B <- data.frame(B)
+class(B) <- c("boot_ci_ncvreg", "data.frame")
+plot(B, n = 20)
+```
+
+
+### Simulation
+
+```{r}
+set.seed(1234)
+tmp_dat <- genDataABN(n=100, p=60, a=6, b=2, rho=0.5, beta=c(1,-1,0.5,-0.5,0.5,-0.5))
+X.std <- std(tmp_dat$X)
+cv_fit <- cv.glmnet(X.std, tmp_dat$y, standardize=FALSE)
+fit <- cv_fit$glmnet.fit
+lam <- cv_fit$lambda.min
+n <- length(tmp_dat$y)
+b <- coef(fit, s=lam)[-1]
+res <- fixedLassoInf(X.std, tmp_dat$y, b, lam*n, sigma=1)
+bb <- res$vmat %*% tmp_dat$y
+B <- cbind(bb, res$ci, res$pv)
+dimnames(B) <- list(names(res$vars), c('estimate', 'lower', 'upper', 'p'))
+B <- data.frame(B)
+B <- B[,-4]
+class(B) <- c("boot_ci_ncvreg", "data.frame")
+plot(B)
+```
+
+## Subsampling
