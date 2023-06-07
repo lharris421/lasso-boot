@@ -5,6 +5,8 @@ title: "Wasserstein"
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
+
+
 # Setup
 
 While looking information on Wasserstein distance and potential implementations in R, I came across the package. Here, we see an example passing in observations from two normal distributions.
@@ -20,7 +22,7 @@ x <- rnorm(10000,mean=0,sd=1)
 y <- rnorm(10000,mean=2,sd=1)
 ```
 
-## waddR
+# waddR
 
 ```{r}
 ## Example of the wasserstein implementation
@@ -29,65 +31,36 @@ wasserstein_metric(x,y,p=2)
 
 However, the implementation seems to rely heavily on the first two moments... which is great if the two distributions are normal, but worries me a bit in the case I am trying to apply it to. With a little thought, I took the conceptual idea (moving pieces of sand) and wondered why we couldn't just order the observations and then match up the ordered observations between two distributions and compute the mean absolute distance between the paired points. I.e. I am asking, "how far, on average, do we have to move the points of one distribution to create the other distribution?" What isn't yet clear to me is if this would give us the minimum amount of movement needed...
 
-## My ideas
+# A different approach
+
+- If this idea would persist, we may wan to revert to the original definition for demonstration of the idea being linked to wasserstein distance.
 
 ```{r}
 ## My idea
-proxy_dist <- function(dist1, dist2) mean(abs(sort(dist1) - sort(dist2)))
+proxy_dist <- function(dist1, dist2) mean(abs(sort(abs(dist1)) - sort(abs(dist2))))
 proxy_dist(x, y) ## Converge in the limit for normal example
+```
 
+```{r}
 ## Function for mixture distribution
-discrete_mixture <- function(p_zero = .8, scale = 1, n = 1e5) {
+discrete_mixture <- function(pzero = .8, rate = 1, n = 1e5) {
   
-  swtch <- runif(n)
-  lap_draws <- rlaplace(n, location = 0, scale = scale)
-  ifelse(swtch <= p_zero, 0, lap_draws)
+  zeros <- rep(0, round(n*pzero))
+  nonzero <- n - length(zeros)
+  exp_quantiles <- qexp(1:nonzero / (nonzero + 1), rate = rate)
+  return(c(zeros, exp_quantiles))
     
 }
 ```
 
-# Laplace Distribution
+# Comparisons
 
-Before continuing, I need to get a better understanding of the lapalce distribution as well as have a way to generate this distribution as well as a mixture distribution which contains a point mass on zero.
-
-```{r}
-## Look at what the different scale values do to the double exponential
-library(VGAM)
-
-## Prior ... changing scale looks the same to me
-prior <- rlaplace(n = 100000, location = 0, scale = 10)
-plot(density(prior, bw = 10 / 1000), col = "red", main = "")
-
-prior <- rlaplace(n = 100000, location = 0, scale = .01)
-plot(density(prior, bw = .01 / 1000), col = "red", main = "")
-```
-
-Next we can see an example of the mixture.
+Here, I will only be adjusting the "truth", the "prior" will stay as a lapalce with rate = 1 (here as an exponential since we only care about the absolute distance).
 
 ```{r}
-## Examples using function
-truth <- discrete_mixture(n = 100000)
-plot(density(truth, bw = .001, weights = (truth !=0) / length(truth)), col = "red", ylim = c(0, 20), main = "")
-lines(density(truth, bw = .001, weights = (truth == 0) / length(truth)), col = "red")
-```
-
-And we can see what the two densities look like together (at least in a relative sense):
-
-```{r}
-plot(density(truth, bw = .001, weights = (truth !=0) / length(truth)), col = "red", ylim = c(0, 20), main = "")
-lines(density(truth, bw = .001, weights = (truth == 0) / length(truth)), col = "red")
-prior <- rlaplace(n = 100000, location = 0, scale = 1)
-lines(density(prior, bw = .001), col = "blue")
-```
-
-## Comparisons
-
-Here, I will only be adjusting the "truth", the "prior" will stay at a lapalce with scale = 1.
-
-```{r}
-sz <- 100000
+sz <- 10000
 truth <- discrete_mixture(n = sz)
-prior <- rlaplace(n = sz, location = 0, scale = 1)
+prior <- qexp(1:sz / (sz + 1), rate = 1)
 proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
 ```
@@ -95,11 +68,11 @@ wasserstein_metric(truth,prior,p=2)
 
 I really want to see if the function I created agrees with the wasserstein function.
 
-If we set the scale to 2 for the "truth", both metric decrease. This is an interesting relationship that I wasn't necessarily expecting. That is, a scale increase for the mixture causes interesting behavior.
+If we set the rate to 2 for the "truth", both metrics increase.
 
 ```{r}
-## Set scale to 2 for truth (both decrease)
-truth <- discrete_mixture(n = sz, scale = 2)
+## Set rate to 2 for truth (both decrease)
+truth <- discrete_mixture(n = sz, rate = 2)
 proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
 ```
@@ -108,33 +81,101 @@ If we change pzero to be .7, as expected, both decrease.
 
 ```{r}
 ## Set pzero to .7 for truth (both decrease)
-truth <- discrete_mixture(n = sz, scale = 1, p_zero = .7)
+truth <- discrete_mixture(n = sz, rate = 1, pzero = .7)
 proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
 ```
 
-If we set the "truth" to be equal to the prior, we see that both metric produce values near zero.
+If we set the "truth" to be equal to the prior, we see that both metric produce zero.
 
 ```{r}
-truth <- discrete_mixture(n = sz, scale = 1, p_zero = 0)
+truth <- discrete_mixture(n = sz, rate = 1, pzero = 0)
 proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
 ```
 
-From here, we can increase the scale, and here we see the expected relation with an increase in the metrics.
+From here, we can increase the rate, and here we see the expected relation with an increase in the metrics.
 
 ```{r}
-truth <- discrete_mixture(n = sz, scale = 2, p_zero = 0)
+truth <- discrete_mixture(n = sz, rate = 2, pzero = 0)
 proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
 ```
 
-We can observe the phenomenon we save before and decrease the distances between the distributions by adding mass at zero. 
+And if we increase the densitiy at zero, we increase the distance metrics.
 
 ```{r}
 ## Now add mass at zero... they both decrease
-truth <- discrete_mixture(n = sz, scale = 2, p_zero = .5)
+truth <- discrete_mixture(n = sz, rate = 2, pzero = .5)
 proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
 ```
+
+# Visualize the effect of rate and pzero
+
+```{r}
+sz <- 1e5
+rates <- seq(.5, 2, by = .05)
+pzeros <- seq(0, .98, by = .02)
+grd <- expand.grid(rates, pzeros)
+
+prior <- qexp(1:sz / (sz + 1), rate = 1)
+dists <- apply(grd, 1, function(x) {
+  truth <- discrete_mixture(n = sz, rate = x[1], pzero = x[2])
+  proxy_dist(prior, truth)
+})
+```
+
+
+```{r}
+df <- data.frame(rate = grd$Var1, pzero = grd$Var2, dist = dists)
+ggplot() +
+  geom_tile(data = df, aes(x = rate, y = pzero, fill = dist)) +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Rate", y = "Pzero", fill = "Distance") +
+  theme_minimal() +
+  geom_line(data = data.frame(x = c(1, 1), y = c(0, 1)), aes(x = x, y = y)) +
+  geom_line(data = data.frame(x = c(.5, 2), y = c(0, 0)), aes(x = x, y = y))
+
+```
+
+This is certainly anisotropic... which is interesting.
+
+# Priors and Truths
+
+Set up a function that solves for the value of lambda that makes the prior as close as possible to the true data passed in. 
+
+```{r}
+met <- function(lam, sig2 = 1, n, truth) {
+  # n <- length(truth)
+  rate <- (n*lam) / sig2
+  prior <- discrete_mixture(rate = rate, pzero = mean(truth == 0), n = length(truth))
+  return(proxy_dist(prior, truth))
+}
+```
+
+The ideal coverage lambda would in theory be set in a way that minimizes the distance between the truth and the prior.... well... maybe if the prior is a good one.
+
+Well... first, maybe I should see if this is even behaving reasonably.
+
+```{r}
+## rate = 1
+## sig = 1
+## n = p = 100
+## prior => lambda of 1/100
+
+## Now draw the truth from the prior
+truth <- discrete_mixture(pzero = 0, n = 100)
+
+## Looks pretty solid to me
+optimize(f = met, c(.0001, 10), truth = truth, n = 100) ## 1/100 = .1
+```
+
+Then, we can use this to try and set a value for lambda:
+
+```{r}
+truth <- c(1,-1,0.5,-0.5,0.5,-0.5, rep(0, 54))
+optimize(f = met, c(1e-4, 1e4), truth = truth, n = 100)
+```
+
 

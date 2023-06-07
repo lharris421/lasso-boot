@@ -5,9 +5,27 @@ title: "Bootstrapping: ncvreg"
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
-## To-do
 
-- Investigate why simulation is different from real data example...
+```{r, include = FALSE}
+progress = FALSE
+met <- function(lam, sig2 = 1, n, truth) {
+  # n <- length(truth)
+  rate <- (n*lam) / sig2
+  prior <- discrete_mixture(rate = rate, pzero = mean(truth == 0), n = length(truth))
+  return(proxy_dist(prior, truth))
+}
+discrete_mixture <- function(pzero = .8, rate = 1, n = 1e5) {
+  
+  zeros <- rep(0, round(n*pzero))
+  nonzero <- n - length(zeros)
+  exp_quantiles <- qexp(1:nonzero / (nonzero + 1), rate = rate)
+  return(c(zeros, exp_quantiles))
+    
+}
+proxy_dist <- function(dist1, dist2) mean(abs(sort(abs(dist1)) - sort(abs(dist2))))
+source("R/genDataABN.R")
+```
+
 
 # Set up test data
 
@@ -35,7 +53,7 @@ hiv_fit <- hiv_cv$fit
 
 ```{r}
 resid <- hiv_fit$y - predict(hiv_fit, lambda = hiv_cv$lambda.min, X = X)
-plot(y, resid)
+plot(y, resid, xlab = "Y", ylab = "residual")
 ```
 
 # Three Different Methods
@@ -43,7 +61,7 @@ plot(y, resid)
 ## Pairs
 
 ```{r}
-tmp <- boot_ncvreg(hiv_fit, lambda = 0.001964070, R = 100, seed = 1234, progress = progress)
+tmp <- boot_ncvreg(hiv_fit, lambda = hiv_cv$lambda.min, R = 100, seed = 1234, progress = progress)
 tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
 plot(tmp_boot_ci, n = 20)
 ```
@@ -51,7 +69,7 @@ plot(tmp_boot_ci, n = 20)
 ## Residual
 
 ```{r}
-tmp <- boot_ncvreg(hiv_fit, lambda = 0.001964070, R = 100, type = "residual", seed = 12345, progress = progress)
+tmp <- boot_ncvreg(hiv_fit, lambda = hiv_cv$lambda.min, R = 100, type = "residual", seed = 12345, progress = progress)
 tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
 plot(tmp_boot_ci, n = 20)
 ```
@@ -59,7 +77,7 @@ plot(tmp_boot_ci, n = 20)
 ## Parametric
 
 ```{r}
-tmp <- boot_ncvreg(hiv_cv, lambda = 0.001964070, R = 100, type = "parametric", seed = 1234, progress = progress)
+tmp <- boot_ncvreg(hiv_cv, lambda = hiv_cv$lambda.min, R = 100, type = "parametric", seed = 1234, progress = progress)
 tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
 plot(tmp_boot_ci, n = 20)
 ```
@@ -81,7 +99,7 @@ cv_fit <- cv.ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")
 ```{r}
 tmp_fit <- cv_fit$fit
 resid <- tmp_fit$y - predict(tmp_fit, lambda = cv_fit$lambda.min, X = tmp_dat$X)
-plot(tmp_fit$y, resid)
+plot(tmp_fit$y, resid, xlab ="Y", ylab = "residual")
 ```
 
 ## Examples
@@ -89,24 +107,25 @@ plot(tmp_fit$y, resid)
 ### Bootstrap: Pairs
 
 ```{r}
-boot_pairs <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, progress = progress)
-boot_ci_pairs <- boot_ci_ncvreg(boot_pairs, type = "percentile")
+progress = TRUE
+boot_pairs <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda.min, R = 100, progress = progress)
+boot_ci_pairs <- boot_ci_ncvreg(boot_pairs, type = "percentile", coverage = .8)
 plot(boot_ci_pairs, n = 10)
 ```
 
 ### Bootstrap: Residual
 
 ```{r}
-boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "residual", progress = progress)
-boot_ci <- boot_ci_ncvreg(boot, type = "percentile")
+boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda.min, R = 100, type = "residual", progress = progress)
+boot_ci <- boot_ci_ncvreg(boot, type = "percentile", coverage = .8)
 plot(boot_ci, n = 10)
 ```
 
 ### Bootstrap: Parametric
 
 ```{r}
-boot_para <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[90], R = 100, type = "parametric", progress = progress)
-boot_ci_para <- boot_ci_ncvreg(boot_para, type = "percentile")
+boot_para <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda.min, R = 100, type = "parametric", progress = progress)
+boot_ci_para <- boot_ci_ncvreg(boot_para, type = "percentile", coverage = .8)
 plot(boot_ci_para, n = 10)
 ```
 
@@ -115,21 +134,29 @@ plot(boot_ci_para, n = 10)
 ### Define functions
 
 ```{r}
-sim <- function(type1, type2, recenter = FALSE, robust = FALSE,
-                lambda_index = 90,
-                n = 100, p = 60, a = 6, b = 2, rho = 0.5, 
-                R = 100, betas = c(1,-1,0.5,-0.5,0.5,-0.5)) {
+sim <- function(type1, type2, lambda, recenter = FALSE, robust = FALSE,
+                n = 100, p = 60, a = 6, b = 2, rho = 0.5, iterations = 100,
+                R = 100, betas = c(1,-1,0.5,-0.5,0.5,-0.5), coverage = .8,
+                correct = TRUE) {
   
-  pb <- txtProgressBar(1, R, style=3)
+  pb <- txtProgressBar(1, iterations, style=3)
   
-  res <- matrix(nrow = R, ncol = p)
-  for (i in 1:R) {
+  res <- matrix(nrow = iterations, ncol = p)
+  for (i in 1:iterations) {
      
     tmp_dat <- genDataABN(n=n, p=p, a=a, b=b, rho=rho, beta=betas)
   
-    cv_fit <- cv.ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")
-    boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda[lambda_index], R = 100, type = type1, progress = FALSE)
-    boot_ci <- boot_ci_ncvreg(boot, type = type2, recenter = recenter, robust = robust)
+    if (lambda == "cv") {
+      fit <- cv.ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")
+      lambda <- fit$lambda.min; if (i == 1) print(lambda)
+    } else {
+      fit <- ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")  
+    }
+    
+    if (lambda < min(fit$lambda) & correct) {lambda <- min(fit$lambda); print(lambda)}
+    
+    boot <- boot_ncvreg(fit, lambda = lambda, R = R, type = type1, progress = FALSE)
+    boot_ci <- boot_ci_ncvreg(boot, type = type2, recenter = recenter, robust = robust, coverage = coverage)
   
     res[i,] <- tmp_dat$beta >= boot_ci$lower & tmp_dat$beta <= boot_ci$upper
     setTxtProgressBar(pb, i)
@@ -140,42 +167,49 @@ sim <- function(type1, type2, recenter = FALSE, robust = FALSE,
   
 }
 
-summarise_cov <- function(res) {
+summarise_cov <- function(res, coverage, all_betas) {
   
   print(paste0("The overall coverage rate is: ", mean(res)))
-  coverage_rates <- apply(res, 2, mean)
+  coverage_rates <- data.frame("coverage" = apply(res, 2, mean),
+                               "beta" = abs(all_betas),
+                               "Sign" = factor(sign(all_betas)))
   
-  plot(abs(all_betas), coverage_rates)
-  abline(h = .95, col = "red")
+  print({
+    ggplot() +
+      geom_point(coverage_rates, mapping = aes(x = beta, y = coverage, color = Sign)) +
+      geom_hline(yintercept = coverage, color = "red") +
+      theme_bw() +
+      xlab(expression(abs(beta))) +
+      ylab("Coverage Rate")
+  })
   
 }
 
-library(stringr)
-eval_scenario <- function(type1, type2, recenter = FALSE, robust = FALSE,
-                lambda_index = 90,
-                n = 100, p = 60, a = 6, b = 2, rho = 0.5, 
-                R = 100, betas = c(1,-1,0.5,-0.5,0.5,-0.5), seed = 1234) {
+eval_scenario <- function(name, type1, type2, lambda, coverage = .8, force = FALSE,
+                          recenter = FALSE, robust = FALSE,
+                          n = 100, p = 60, a = 6, b = 2, rho = 0.5, 
+                          R = 100, iterations = 100, betas = c(1,-1,0.5,-0.5,0.5,-0.5), seed = 1234) {
   
-  
-  bts <- str_replace_all(paste0(betas, collapse = "_"), "-", "n")
-  nm <- paste0(c(type1, type2, recenter, robust, lambda_index, n, p, a, b, rho, R, bts, ".rds"), collapse = "_")
+  tmp_dat <- genDataABN(n=n, p=p, a=a, b=b, rho=rho, beta=betas)
+  all_betas <- tmp_dat$beta
+  nm <- paste0(c(name, type1, type2, coverage, lambda, n, p, a, b, rho, R, iterations, ".rds"), collapse = "_")
   
   all_files <- list.files("/Users/loganharris/github/dissertation/storage")
   
-  if (!(nm %in% all_files)) {
+  if (!(nm %in% all_files) | force) {
     
     set.seed(seed)
     tmp <- sim(type1, type2, recenter = recenter, robust = robust,
-                lambda_index = lambda_index,
+                lambda = lambda,
                 n = n, p = p, a = a, b = b, rho = rho, 
-                R = R, betas = betas)
+                R = R, betas = betas, coverage = coverage)
     save(tmp, file = paste0("/Users/loganharris/github/dissertation/storage/", nm))
-    summarise_cov(tmp)
+    summarise_cov(tmp, coverage = coverage, all_betas)
     
   } else {
     
     load(paste0("/Users/loganharris/github/dissertation/storage/", nm))
-    summarise_cov(tmp)
+    summarise_cov(tmp, coverage = coverage, all_betas)
     
   }
   
@@ -185,7 +219,7 @@ eval_scenario <- function(type1, type2, recenter = FALSE, robust = FALSE,
 
 ### Initial
 
-Previous work I have done showed that the method for computing intervals seemed less important that the method used for the bootstrap. I may revisit this later, but for now I am focusing on the different methods for bootstrapping. 
+Previous work I have done showed that the method for computing intervals seemed less important that the method used for the bootstrap. I may revisit this later, but for now I am focusing on the different methods for bootstrapping. Even from here, for now I will focus on the "pairs" bootstrap.
 
 ```{r}
 p <- 60
@@ -193,56 +227,26 @@ n <- 100
 b <- 2
 betas <- c(1,-1,0.5,-0.5,0.5,-0.5)
 a <- length(betas)
-all_betas <- c(betas, rep(0, p - a))
+
+truth <- c(betas, rep(0, p - length(betas)))
+(lambda <- optimize(f = met, c(1e-4, 1e4), truth = truth, n = n)$minimum)
 ```
 
-#### Pairs
-
 ```{r}
-eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-```
-
-#### Residual
-
-```{r}
-eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-```
-
-#### Parametric
-
-```{r}
-eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+eval_scenario("initial", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = lambda)
 ```
 
 ### Larger N
 
 What happens if under the same conditions we increase the sample size?
 
-Everything seems to be working here...
-
 ```{r}
 n <- 500
+(lambda <- optimize(f = met, c(1e-4, 1e4), truth = truth, n = n)$minimum)
+eval_scenario("largerN", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, iterations = 100, lambda = lambda, coverage = .8)
 ```
 
-#### Pairs
-
-```{r}
-eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-```
-
-#### Residual
-
-```{r}
-eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-```
-
-#### Parametric
-
-```{r}
-eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-```
-
-
+This performs much better.
 
 ### Increasing values of betas
 
@@ -250,49 +254,81 @@ eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b
 p <- 100
 n <- 160
 b <- 2
-betas <- c(5, -4.5, 4, -3.5, 3, -2.5, 2, -1.5, 1, -.5)
+betas <- c(seq(0.5, 5, by = .5)) * rep(c(1, -1), 5)
 a <- length(betas)
-all_betas <- c(betas, rep(0, p - a))
+
+truth <- c(betas, rep(0, p - length(betas)))
+(lambda <- optimize(f = met, c(1e-3, 1e3), truth = truth, n = n)$minimum)
 ```
 
-#### Pairs
+
+```{r, eval = FALSE}
+eval_scenario("increasing", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = .007, force = TRUE)
+```
+## Alternative ways of calculating lambda
+
+
+### Estimation Consistency
 
 ```{r}
-eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+prob <- .99
+p <- 100
+n <- 160
+c <- log((prob - 1) / -2) * (-2 / log(p)) + 2
+(lambda <- 2*sqrt(c*log(p)/n))
 ```
-
-#### Residual
 
 ```{r}
-eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+eval_scenario("ec", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = lambda)
+```
+```{r}
+rt <- function(lam, n, sig2 = 1) {
+  (n*lam) / sig2
+}
+
+xaxs <- seq(0, 10, by = .1)
+plot(x = xaxs, y = dexp(xaxs, rate = rt(lambda, n)), type = "l")
 ```
 
-#### Parametric
+### Via CV
 
 ```{r}
-eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+eval_scenario("cv", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = "cv", force = TRUE)
 ```
 
-### Small lambda value
+## Evaluating Distance
 
 ```{r}
-lambda_index = 100
+n <- 300
+a <- p <- 200
+b <- 0
+betas <- qexp(1:p / (p+1), rate = rt(.015, n = 300))
+
+hist(betas)
+
+truth <- c(betas, rep(0, p - length(betas)))
+lambda <- optimize(f = met, c(1e-3, 1e3), truth = truth, n = n)$minimum ## 0.015
+
+eval_scenario("dist", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = lambda)
+eval_scenario("dist", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = "cv")
 ```
 
-#### Pairs
+## Uniform comparison
 
 ```{r}
-eval_scenario(type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
+p <- 1000
+prior <- qexp(1:p / (p+1), rate = rt(.015, n = n))
+unif <- qunif(1:p / (p+1), min = -1, max = 1)
+proxy_dist(prior, unif)
+
+p <- 200
+betas <- qunif(1:p / (p+1), min = -1, max = 1)
+
+truth <- c(betas, rep(0, p - length(betas)))
+lambda <- optimize(f = met, c(1e-3, 1e3), truth = truth, n = n)$minimum ## 0.0068
+
+eval_scenario("dist", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = lambda)
+eval_scenario("uniform", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, lambda = "cv")
 ```
 
-#### Residual
-
-```{r}
-eval_scenario(type1 = "residual", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-```
-
-#### Parametric
-
-```{r}
-eval_scenario(type1 = "parametric", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas)
-```
+Need to come back and double check I didn't switch n and p anywhere else
