@@ -6,7 +6,7 @@ title: "Bootstrapping: ncvreg"
 ```
 
 
-```{r, include = FALSE}
+```{r, echo = FALSE}
 progress = FALSE
 met <- function(lam, sig2 = 1, n, truth) {
   # n <- length(truth)
