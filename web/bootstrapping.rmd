@@ -1,5 +1,8 @@
 ---
 title: "Bootstrapping: ncvreg"
+output:
+  html_document:
+    code_folding: hide
 ---
 
 ```{r setup, child = 'web/_include/setup.rmd'}
@@ -262,7 +265,7 @@ truth <- c(betas, rep(0, p - length(betas)))
 
 
 ```{r, eval = FALSE}
-eval_scenario("increasing", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = .007, force = TRUE)
+eval_scenario("increasing", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = .007)
 ```
 ## Alternative ways of calculating lambda
 
@@ -284,15 +287,12 @@ eval_scenario("ec", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, 
 rt <- function(lam, n, sig2 = 1) {
   (n*lam) / sig2
 }
-
-xaxs <- seq(0, 10, by = .1)
-plot(x = xaxs, y = dexp(xaxs, rate = rt(lambda, n)), type = "l")
 ```
 
 ### Via CV
 
 ```{r}
-eval_scenario("cv", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = "cv", force = TRUE)
+eval_scenario("cv", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = "cv")
 ```
 
 ## Evaluating Distance
