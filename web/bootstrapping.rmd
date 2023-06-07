@@ -107,7 +107,6 @@ plot(tmp_fit$y, resid, xlab ="Y", ylab = "residual")
 ### Bootstrap: Pairs
 
 ```{r}
-progress = TRUE
 boot_pairs <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda.min, R = 100, progress = progress)
 boot_ci_pairs <- boot_ci_ncvreg(boot_pairs, type = "percentile", coverage = .8)
 plot(boot_ci_pairs, n = 10)
