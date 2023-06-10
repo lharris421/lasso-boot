@@ -1,0 +1,140 @@
+---
+title: "Understanding Distance Metric"
+runtime: shiny
+output: 
+  html_document:
+    theme: lumen
+---
+
+```{r setup, include=FALSE}
+library(shiny)
+library(ggplot2)
+```
+
+```{r, echo = FALSE}
+# Available distributions
+available_distributions <- c("Beta", "Cauchy", "Chi-Squared", "Exponential", 
+                            "F", "Gamma", "Log-Normal", 
+                            "Logistic", "Normal", "Student's t", 
+                            "Uniform", "Weibull")
+
+# Parameters for each distribution
+distribution_parameters <- list(
+  Beta = list(shape1 = 1, shape2 = 1, ncp = 0),  # non-centrality parameter
+  Cauchy = list(location = 0, scale = 1),
+  "Chi-Squared" = list(df = 1, ncp = 0),  # degrees of freedom
+  Exponential = list(rate = 1),
+  F = list(df1 = 1, df2 = 1, ncp = 0),  # degrees of freedom
+  Gamma = list(shape = 1, scale = 1),
+  "Log-Normal" = list(meanlog = 0, sdlog = 1),
+  Logistic = list(location = 0, scale = 1),
+  Normal = list(mean = 0, sd = 1),
+  "Student's t" = list(df = 1, ncp = 0),
+  Uniform = list(min = 0, max = 1),
+  Weibull = list(shape = 1, scale = 1)
+)
+
+# Map the distribution names to their corresponding function prefixes
+distribution_function_prefixes <- c(
+  Beta = "beta",
+  Cauchy = "cauchy",
+  "Chi-Squared" = "chisq",
+  Exponential = "exp",
+  F = "f",
+  Gamma = "gamma",
+  "Log-Normal" = "lnorm",
+  Logistic = "logis",
+  Normal = "norm",
+  "Student's t" = "t",
+  Uniform = "unif",
+  Weibull = "weib"
+)
+
+
+# Define a custom distance function
+# Note: Replace this with your own function
+distance_function <- function(v1, v2) {
+  mean(abs(sort(abs(v1)) - sort(abs(v2))))
+}
+
+# User Interface
+shinyApp(
+  ui = fluidPage(
+    selectInput("dist1", "Select first distribution:", available_distributions),
+    uiOutput("params1"),
+  
+    selectInput("dist2", "Select second distribution:", available_distributions),
+    uiOutput("params2"),
+  
+    actionButton("go", "Go"),
+  
+    plotOutput("plot"),
+    textOutput("distance")
+  ),
+  
+  # Server logic
+  server = function(input, output) {
+    paramsUI <- function(id, params) {
+      tagList(
+        lapply(names(params), function(name) {
+          numericInput(paste0(id, name), paste0("Enter ", name, ":"), params[[name]])
+        })
+      )
+    }
+  
+    output$params1 <- renderUI({
+      paramsUI("dist1", distribution_parameters[[input$dist1]])
+    })
+  
+    output$params2 <- renderUI({
+      paramsUI("dist2", distribution_parameters[[input$dist2]])
+    })
+  
+    observeEvent(input$go, {
+      params1 <- lapply(names(distribution_parameters[[input$dist1]]), function(name) {
+        input[[paste0("dist1", name)]]
+      })
+      params2 <- lapply(names(distribution_parameters[[input$dist2]]), function(name) {
+        input[[paste0("dist2", name)]]
+      })
+    
+      q_func1 <- get(paste0("q", distribution_function_prefixes[input$dist1]), "package:stats")
+      q_func2 <- get(paste0("q", distribution_function_prefixes[input$dist2]), "package:stats")
+    
+      v1 <- do.call(q_func1, c(list(p = (1:100)/101), params1))
+      v2 <- do.call(q_func2, c(list(p = (1:100)/101), params2))
+
+      # Create the plots
+      x <- seq(min(v1, v2), max(v1, v2), length.out = 100)
+      d_func1 <- get(paste0("d", distribution_function_prefixes[input$dist1]), "package:stats")
+      d_func2 <- get(paste0("d", distribution_function_prefixes[input$dist2]), "package:stats")
+      y1 <- do.call(d_func1, c(list(x = x), params1))
+      y2 <- do.call(d_func2, c(list(x = x), params2))
+
+      
+      df <- data.frame(
+        y = c(y1, y2),
+        x = c(x, x),
+        group = c(rep("1", 100), rep("2", 100))
+      )
+    
+      lab1 <- paste0(input$dist1, "(", paste0(unlist(params1), collapse = ", "),")")
+      lab2 <- paste0(input$dist2, "(", paste0(unlist(params2), collapse = ", "),")")
+      
+      output$plot <- renderPlot({
+        ggplot(df, aes(x = x, y = y, color = group)) +
+          geom_line() +
+          theme_minimal() +
+          labs(title = "Distributions", x = "Quantiles", y = "Density", color = "Distribution") +
+          scale_color_discrete(labels = c(lab1, lab2))
+      })
+    
+      # Compute and display the distance
+      output$distance <- renderText({
+        paste0("Distance: ", distance_function(v1, v2), "\n")
+      })
+    })
+  }
+)
+
+```

@@ -14,7 +14,8 @@ progress = FALSE
 met <- function(lam, sig2 = 1, n, truth) {
   # n <- length(truth)
   rate <- (n*lam) / sig2
-  prior <- discrete_mixture(rate = rate, pzero = mean(truth == 0), n = length(truth))
+  # prior <- discrete_mixture(rate = rate, pzero = mean(truth == 0), n = length(truth))
+  prior <- qexp(1:length(truth)/(length(truth)+1), rate = rate)
   return(proxy_dist(prior, truth))
 }
 discrete_mixture <- function(pzero = .8, rate = 1, n = 1e5) {
