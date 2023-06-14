@@ -2,9 +2,9 @@ title: "Dissertation Work"
 left:
   - text: "Bootstrapping: ncvreg"
     href: bootstrapping.html
-  - text: "Bootstrapping: lm"
+  - text: "Distance"
+    href: distance.html
+  - text: "Distribution Distance Visualizer"
+    href: understanding_distance.html
+  - text: "Bootstrapping Verification (lm)"
     href: bootstrapping_lm.html
-  - text: "Wasserstein Distance"
-    href: wasserstein.html
-  - text: "In Progress"
-    href: "playground.html"

@@ -1,5 +1,5 @@
 ---
-title: "Wasserstein"
+title: "Distribution to Distribution"
 output:
   html_document:
     code_folding: hide
@@ -8,11 +8,9 @@ output:
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
+# waddR
 
-
-# Setup
-
-While looking information on Wasserstein distance and potential implementations in R, I came across the package. Here, we see an example passing in observations from two normal distributions.
+While looking information on Wasserstein distance and potential implementations in R, I came across the package `waddR`. Here, we see an example passing in observations from two normal distributions.
 
 ```{r}
 ## Load library for wasserstein distnace (emperical approximation)
@@ -23,11 +21,7 @@ library(waddR)
 set.seed(24)
 x <- rnorm(10000,mean=0,sd=1)
 y <- rnorm(10000,mean=2,sd=1)
-```
 
-# waddR
-
-```{r}
 ## Example of the wasserstein implementation
 wasserstein_metric(x,y,p=2)
 ```
@@ -36,13 +30,41 @@ However, the implementation seems to rely heavily on the first two moments... wh
 
 # A different approach
 
-- If this idea would persist, we may wan to revert to the original definition for demonstration of the idea being linked to wasserstein distance.
+Note: If this idea would persist, we may wan to revert to the original definition for demonstration of the idea being linked to wasserstein distance.
+
+The idea here is motivated by the Wasserstein distance treating each observation as a grain of sand and determing how far on average a grain must be moved in order to move one distribution to the other.
 
 ```{r}
 ## My idea
 proxy_dist <- function(dist1, dist2) mean(abs(sort(abs(dist1)) - sort(abs(dist2))))
 proxy_dist(x, y) ## Converge in the limit for normal example
 ```
+
+
+We may then want to understand how the distributions differ from one another. Here, we will conceptualize the first distribution as being the prior and the second being the true underlying distribution of the coefficients. Of interest is how far we need to move the true distribution to match the prior.
+
+```{r}
+rlr <- function(dist1, dist2) {
+  move <- sort(abs(dist1)) - sort(abs(dist2))
+  move_left <- mean(move[move < 0])
+  move_right <- mean(move[move > 0])
+  exact <- mean(move == 0)
+  if (is.nan(move_left) | is.nan(move_right)) {
+    if (is.nan(move_left) & is.nan(move_right)) {
+      return(0)
+    } else if (is.nan(move_left)) {
+      return(1)
+    } else if (is.nan(move_right)) {
+      return(-1)
+    }
+  }
+  total_move <- mean(abs(move))
+  return(((move_right - move_left) / total_move)^(exact))
+}
+
+rlr(x, y)
+```
+
 
 ```{r}
 ## Function for mixture distribution
@@ -66,6 +88,7 @@ truth <- discrete_mixture(n = sz)
 prior <- qexp(1:sz / (sz + 1), rate = 1)
 proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
+rlr(prior, truth)
 ```
 
 
@@ -76,8 +99,9 @@ If we set the rate to 2 for the "truth", both metrics increase.
 ```{r}
 ## Set rate to 2 for truth (both decrease)
 truth <- discrete_mixture(n = sz, rate = 2)
-proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
+proxy_dist(prior, truth)
+rlr(prior, truth)
 ```
 
 If we change pzero to be .7, as expected, both decrease.
@@ -85,24 +109,27 @@ If we change pzero to be .7, as expected, both decrease.
 ```{r}
 ## Set pzero to .7 for truth (both decrease)
 truth <- discrete_mixture(n = sz, rate = 1, pzero = .7)
-proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
+proxy_dist(prior, truth)
+rlr(prior, truth)
 ```
 
 If we set the "truth" to be equal to the prior, we see that both metric produce zero.
 
 ```{r}
 truth <- discrete_mixture(n = sz, rate = 1, pzero = 0)
-proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
+proxy_dist(prior, truth)
+rlr(prior, truth)
 ```
 
 From here, we can increase the rate, and here we see the expected relation with an increase in the metrics.
 
 ```{r}
 truth <- discrete_mixture(n = sz, rate = 2, pzero = 0)
-proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
+proxy_dist(prior, truth)
+rlr(prior, truth)
 ```
 
 And if we increase the densitiy at zero, we increase the distance metrics.
@@ -110,22 +137,25 @@ And if we increase the densitiy at zero, we increase the distance metrics.
 ```{r}
 ## Now add mass at zero... they both decrease
 truth <- discrete_mixture(n = sz, rate = 2, pzero = .5)
-proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
+proxy_dist(prior, truth)
+rlr(prior, truth)
 ```
 
 # Visualize the effect of rate and pzero
 
 ```{r}
 sz <- 1e5
-rates <- seq(.5, 2, by = .05)
+rates <- seq(.05, 1.45, by = .05)
 pzeros <- seq(0, .98, by = .02)
 grd <- expand.grid(rates, pzeros)
 
 prior <- qexp(1:sz / (sz + 1), rate = 1)
 dists <- apply(grd, 1, function(x) {
   truth <- discrete_mixture(n = sz, rate = x[1], pzero = x[2])
-  proxy_dist(prior, truth)
+  tmp <- proxy_dist(prior, truth)
+  tmp <- ifelse(tmp > 1, 1, tmp)
+  return(tmp)
 })
 ```
 
@@ -138,11 +168,34 @@ ggplot() +
   labs(x = "Rate", y = "Pzero", fill = "Distance") +
   theme_minimal() +
   geom_line(data = data.frame(x = c(1, 1), y = c(0, 1)), aes(x = x, y = y)) +
-  geom_line(data = data.frame(x = c(.5, 2), y = c(0, 0)), aes(x = x, y = y))
-
+  geom_line(data = data.frame(x = c(.05, 1.45), y = c(0, 0)), aes(x = x, y = y))
 ```
 
 This is certainly anisotropic... which is interesting.
+
+Now let us consider the rl ratio:
+
+```{r}
+rlrs <- apply(grd, 1, function(x) {
+  truth <- discrete_mixture(n = sz, rate = x[1], pzero = x[2])
+  rlr(prior, truth)
+})
+```
+
+
+```{r}
+df <- data.frame(rate = grd$Var1, pzero = grd$Var2, dist = rlrs)
+ggplot() +
+  geom_tile(data = df, aes(x = rate, y = pzero, fill = dist)) +
+  coord_cartesian(ylim = c(0, .05)) +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Rate", y = "Pzero", fill = "Distance") +
+  theme_minimal() +
+  geom_line(data = data.frame(x = c(1, 1), y = c(0, .11)), aes(x = x, y = y)) +
+  geom_line(data = data.frame(x = c(.05, 1.45), y = c(0, 0)), aes(x = x, y = y))
+
+```
+
 
 # Priors and Truths
 
@@ -150,9 +203,8 @@ Set up a function that solves for the value of lambda that makes the prior as cl
 
 ```{r}
 met <- function(lam, sig2 = 1, n, truth) {
-  # n <- length(truth)
   rate <- (n*lam) / sig2
-  prior <- discrete_mixture(rate = rate, pzero = mean(truth == 0), n = length(truth))
+  prior <- qexp((1:length(truth)) / (length(truth) + 1), rate = rate)
   return(proxy_dist(prior, truth))
 }
 ```
@@ -181,4 +233,4 @@ truth <- c(1,-1,0.5,-0.5,0.5,-0.5, rep(0, 54))
 optimize(f = met, c(1e-4, 1e4), truth = truth, n = 100)
 ```
 
-
+Well.... this isn't going to work...

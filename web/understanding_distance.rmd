@@ -4,11 +4,14 @@ runtime: shiny
 output: 
   html_document:
     theme: lumen
+    toc: FALSE
 ---
 
 ```{r setup, include=FALSE}
 library(shiny)
 library(ggplot2)
+library(shinythemes)
+library(plotly)
 ```
 
 ```{r, echo = FALSE}
@@ -57,19 +60,49 @@ distance_function <- function(v1, v2) {
   mean(abs(sort(abs(v1)) - sort(abs(v2))))
 }
 
+rlr <- function(dist1, dist2) {
+  move <- sort(abs(dist1)) - sort(abs(dist2))
+  move_left <- mean(move[move < 0])
+  move_right <- mean(move[move > 0])
+  exact <- mean(move == 0)
+  if (is.nan(move_left) | is.nan(move_right)) {
+    if (is.nan(move_left) & is.nan(move_right)) {
+      return(0)
+    } else if (is.nan(move_left)) {
+      return(1)
+    } else if (is.nan(move_right)) {
+      return(-1)
+    }
+  }
+  total_move <- mean(abs(move))
+  return(((move_right - move_left) / total_move)^(exact))
+}
+
+n <- 10000
+
 # User Interface
 shinyApp(
   ui = fluidPage(
-    selectInput("dist1", "Select first distribution:", available_distributions),
-    uiOutput("params1"),
-  
-    selectInput("dist2", "Select second distribution:", available_distributions),
-    uiOutput("params2"),
-  
+    theme = shinytheme("sandstone"),  # Use the 'Sandstone' theme
+    titlePanel("Compare Two Distributions"),
+    fluidRow(
+      column(6,
+        wellPanel(
+          selectInput("dist1", "Select first distribution:", available_distributions),
+          uiOutput("params1")
+        )
+      ),
+      column(6,
+        wellPanel(
+          selectInput("dist2", "Select second distribution:", available_distributions),
+          uiOutput("params2")
+        )
+      )
+    ),
     actionButton("go", "Go"),
-  
-    plotOutput("plot"),
-    textOutput("distance")
+    textOutput("distance"),
+    textOutput("rlr"),
+    plotlyOutput("plot")
   ),
   
   # Server logic
@@ -81,6 +114,7 @@ shinyApp(
         })
       )
     }
+    
   
     output$params1 <- renderUI({
       paramsUI("dist1", distribution_parameters[[input$dist1]])
@@ -89,8 +123,14 @@ shinyApp(
     output$params2 <- renderUI({
       paramsUI("dist2", distribution_parameters[[input$dist2]])
     })
+    
   
     observeEvent(input$go, {
+      withProgress(
+        message = 'Calculating...',
+        detail = 'This may take a moment...',
+        value = 0,
+        {
       params1 <- lapply(names(distribution_parameters[[input$dist1]]), function(name) {
         input[[paste0("dist1", name)]]
       })
@@ -101,40 +141,46 @@ shinyApp(
       q_func1 <- get(paste0("q", distribution_function_prefixes[input$dist1]), "package:stats")
       q_func2 <- get(paste0("q", distribution_function_prefixes[input$dist2]), "package:stats")
     
-      v1 <- do.call(q_func1, c(list(p = (1:100)/101), params1))
-      v2 <- do.call(q_func2, c(list(p = (1:100)/101), params2))
+      v1 <- do.call(q_func1, c(list(p = (1:n)/(n+1)), params1))
+      v2 <- do.call(q_func2, c(list(p = (1:n)/(n+1)), params2))
 
       # Create the plots
-      x <- seq(min(v1, v2), max(v1, v2), length.out = 100)
+      x <- seq(min(v1, v2), max(v1, v2), length.out = n)
       d_func1 <- get(paste0("d", distribution_function_prefixes[input$dist1]), "package:stats")
       d_func2 <- get(paste0("d", distribution_function_prefixes[input$dist2]), "package:stats")
       y1 <- do.call(d_func1, c(list(x = x), params1))
       y2 <- do.call(d_func2, c(list(x = x), params2))
 
-      
+      lab1 <- paste0(input$dist1, "(", paste0(unlist(params1), collapse = ", "),")")
+      lab2 <- paste0(input$dist2, "(", paste0(unlist(params2), collapse = ", "),")")
       df <- data.frame(
         y = c(y1, y2),
         x = c(x, x),
-        group = c(rep("1", 100), rep("2", 100))
+        group = c(rep("1", n), rep("2", n))
       )
-    
-      lab1 <- paste0(input$dist1, "(", paste0(unlist(params1), collapse = ", "),")")
-      lab2 <- paste0(input$dist2, "(", paste0(unlist(params2), collapse = ", "),")")
+      df$group <- factor(df$group, levels = c("1", "2"), labels = c(lab1, lab2))
       
-      output$plot <- renderPlot({
-        ggplot(df, aes(x = x, y = y, color = group)) +
+      output$plot <- renderPlotly({
+        gg <- ggplot(df, aes(x = x, y = y, color = group)) +
           geom_line() +
           theme_minimal() +
-          labs(title = "Distributions", x = "Quantiles", y = "Density", color = "Distribution") +
-          scale_color_discrete(labels = c(lab1, lab2))
+          labs(title = "Distributions", x = "Quantiles", y = "Density", color = "Distribution")
+        
+        ggplotly(gg)
       })
     
       # Compute and display the distance
       output$distance <- renderText({
-        paste0("Distance: ", distance_function(v1, v2), "\n")
+        paste0("Distance: ", round(distance_function(v1, v2), 3), "\n")
       })
+      output$rlr <- renderText({
+        paste0("Right-left Ratio: ", rlr(v1, v2), "\n")
+      })
+        }
+      )
     })
-  }
+  },
+  options = list(height = "800", width = "1200")
 )
 
 ```

@@ -4,6 +4,7 @@ library(kableExtra)
 library(ncvreg) ## devtools::install_github("https://github.com/pbreheny/ncvreg/tree/bootstrap")
 library(dplyr)
 library(stringr)
+library(np)
 set.seed(1234)
 knitr::opts_chunk$set(
   cache = FALSE, 
