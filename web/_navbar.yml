@@ -5,6 +5,6 @@ left:
   - text: "Distance"
     href: distance.html
   - text: "Distribution Distance Visualizer"
-    href: understanding_distance.html
+    href: udl.html
   - text: "Bootstrapping Verification (lm)"
     href: bootstrapping_lm.html

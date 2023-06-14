@@ -1,0 +1,13 @@
+---
+title: "Understanding Distance Metric"
+output: 
+  html_document:
+    toc: FALSE
+---
+
+
+# Link
+
+[App](https://loganharris.shinyapps.io/understanding_distance/)
+
+
