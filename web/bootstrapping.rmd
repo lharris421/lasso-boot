@@ -11,41 +11,9 @@ output:
 
 ```{r, echo = FALSE}
 progress = FALSE
-met <- function(lam, sig2 = 1, n, truth) {
-  rate <- (n*lam) / sig2
-  prior <- qexp(1:length(truth)/(length(truth)+1), rate = rate)
-  return(proxy_dist(prior, truth))
-}
-discrete_mixture <- function(pzero = .8, rate = 1, n = 1e5) {
-  
-  zeros <- rep(0, round(n*pzero))
-  nonzero <- n - length(zeros)
-  exp_quantiles <- qexp(1:nonzero / (nonzero + 1), rate = rate)
-  return(c(zeros, exp_quantiles))
-    
-}
-proxy_dist <- function(dist1, dist2) round(mean(abs(sort(abs(dist1)) - sort(abs(dist2)))), 3)
-rlr <- function(dist1, dist2) {
-  move <- sort(abs(dist1)) - sort(abs(dist2))
-  move_left <- mean(move[move < 0])
-  move_right <- mean(move[move > 0])
-  exact <- mean(move == 0)
-  if (is.nan(move_left) | is.nan(move_right)) {
-    if (is.nan(move_left) & is.nan(move_right)) {
-      return(0)
-    } else if (is.nan(move_left)) {
-      return(1)
-    } else if (is.nan(move_right)) {
-      return(-1)
-    }
-  }
-  total_move <- mean(abs(move))
-  return(round(((move_right - move_left) / total_move)^(exact), 3))
-}
-rt <- function(lam, n, sig2 = 1) {
-  (n*lam) / sig2
-}
-source("R/genDataABN.R")
+
+## change to load all
+devtools::load_all()
 ```
 
 
@@ -281,6 +249,7 @@ betas <- c(1,-1,0.5,-0.5,0.5,-0.5)
 a <- length(betas)
 ```
 
+
 #### Boot + Pairs
 
 ```{r}
@@ -313,6 +282,7 @@ a <- length(betas)
 ```
 
 
+
 ```{r, eval = FALSE}
 eval_scenario("increasing", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = "boot")
 ```
@@ -331,6 +301,13 @@ n <- 300
 a <- p <- 200
 b <- 0
 betas <- qexp(1:p / (p+1), rate = rt(.015, n = 300))
+
+truth <- c(rep(0, p - length(betas)), betas)
+(lambda <- optimize(met, interval = c(1e-3, 1e2), n = n, truth = truth)$minimum)
+```
+
+```{r}
+eval_scenario("dist", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = lambda)
 ```
 
 ### CV
@@ -349,14 +326,22 @@ eval_scenario("dist", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a
 ## Uniform
 
 ```{r}
-p <- 1000
+n <- 300
+a <- p <- 200
+b <- 0
 prior <- qexp(1:p / (p+1), rate = rt(.015, n = n))
 unif <- qunif(1:p / (p+1), min = -1, max = 1)
-print(paste0("Distance to prior: ", proxy_dist(prior, unif)))
-print(paste0("Right-Left Ratio: ", rlr(prior, unif)))
+print(paste0("Distance to prior: ", round(proxy_dist(prior, unif), 3)))
 
-p <- 200
 betas <- qunif(1:p / (p+1), min = -1, max = 1)
+```
+
+### Optimize
+
+```{r}
+truth <- c(rep(0, p - length(betas)), betas)
+(lambda <- optimize(met, interval = c(1e-3, 1e2), n = n, truth = truth)$minimum)
+eval_scenario("uniform", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, lambda = lambda)
 ```
 
 ### CV

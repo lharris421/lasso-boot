@@ -7,34 +7,32 @@ output:
     toc: FALSE
 ---
 
-```{r setup, include=FALSE}
+```{r setup, child = '_include/setup.rmd'}
+```
+
+
+```{r, echo = FALSE}
 library(shiny)
 library(ggplot2)
 library(shinythemes)
 library(plotly)
-```
 
-```{r, echo = FALSE}
 # Available distributions
-available_distributions <- c("Beta", "Cauchy", "Chi-Squared", "Exponential", 
-                            "F", "Gamma", "Log-Normal", 
-                            "Logistic", "Normal", "Student's t", 
-                            "Uniform", "Weibull")
+available_distributions <- c("Cauchy", "Chi-Squared", "Exponential", 
+                            "F", "Gamma", "Log-Normal", "Normal", "Student's t", 
+                            "Uniform")
 
 # Parameters for each distribution
 distribution_parameters <- list(
-  Beta = list(shape1 = 1, shape2 = 1, ncp = 0),  # non-centrality parameter
   Cauchy = list(location = 0, scale = 1),
   "Chi-Squared" = list(df = 1, ncp = 0),  # degrees of freedom
   Exponential = list(rate = 1),
   F = list(df1 = 1, df2 = 1, ncp = 0),  # degrees of freedom
   Gamma = list(shape = 1, scale = 1),
   "Log-Normal" = list(meanlog = 0, sdlog = 1),
-  Logistic = list(location = 0, scale = 1),
   Normal = list(mean = 0, sd = 1),
   "Student's t" = list(df = 1, ncp = 0),
-  Uniform = list(min = 0, max = 1),
-  Weibull = list(shape = 1, scale = 1)
+  Uniform = list(min = 0, max = 1)
 )
 
 # Map the distribution names to their corresponding function prefixes
@@ -56,29 +54,10 @@ distribution_function_prefixes <- c(
 
 # Define a custom distance function
 # Note: Replace this with your own function
-distance_function <- function(v1, v2) {
-  mean(abs(sort(abs(v1)) - sort(abs(v2))))
-}
 
-rlr <- function(dist1, dist2) {
-  move <- sort(abs(dist1)) - sort(abs(dist2))
-  move_left <- mean(move[move < 0])
-  move_right <- mean(move[move > 0])
-  exact <- mean(move == 0)
-  if (is.nan(move_left) | is.nan(move_right)) {
-    if (is.nan(move_left) & is.nan(move_right)) {
-      return(0)
-    } else if (is.nan(move_left)) {
-      return(1)
-    } else if (is.nan(move_right)) {
-      return(-1)
-    }
-  }
-  total_move <- mean(abs(move))
-  return(((move_right - move_left) / total_move)^(exact))
-}
 
 n <- 10000
+distance_function <- proxy_dist
 
 # User Interface
 shinyApp(
@@ -101,7 +80,6 @@ shinyApp(
     ),
     actionButton("go", "Go"),
     textOutput("distance"),
-    textOutput("rlr"),
     plotlyOutput("plot")
   ),
   
@@ -115,7 +93,6 @@ shinyApp(
       )
     }
     
-  
     output$params1 <- renderUI({
       paramsUI("dist1", distribution_parameters[[input$dist1]])
     })
@@ -172,9 +149,6 @@ shinyApp(
       # Compute and display the distance
       output$distance <- renderText({
         paste0("Distance: ", round(distance_function(v1, v2), 3), "\n")
-      })
-      output$rlr <- renderText({
-        paste0("Right-left Ratio: ", rlr(v1, v2), "\n")
       })
         }
       )

@@ -36,7 +36,6 @@ The idea here is motivated by the Wasserstein distance treating each observation
 
 ```{r}
 ## My idea
-proxy_dist <- function(dist1, dist2) mean(abs(sort(abs(dist1)) - sort(abs(dist2))))
 proxy_dist(x, y) ## Converge in the limit for normal example
 ```
 
@@ -44,39 +43,9 @@ proxy_dist(x, y) ## Converge in the limit for normal example
 We may then want to understand how the distributions differ from one another. Here, we will conceptualize the first distribution as being the prior and the second being the true underlying distribution of the coefficients. Of interest is how far we need to move the true distribution to match the prior.
 
 ```{r}
-rlr <- function(dist1, dist2) {
-  move <- sort(abs(dist1)) - sort(abs(dist2))
-  move_left <- mean(move[move < 0])
-  move_right <- mean(move[move > 0])
-  exact <- mean(move == 0)
-  if (is.nan(move_left) | is.nan(move_right)) {
-    if (is.nan(move_left) & is.nan(move_right)) {
-      return(0)
-    } else if (is.nan(move_left)) {
-      return(1)
-    } else if (is.nan(move_right)) {
-      return(-1)
-    }
-  }
-  total_move <- mean(abs(move))
-  return(((move_right - move_left) / total_move)^(exact))
-}
-
 rlr(x, y)
 ```
 
-
-```{r}
-## Function for mixture distribution
-discrete_mixture <- function(pzero = .8, rate = 1, n = 1e5) {
-  
-  zeros <- rep(0, round(n*pzero))
-  nonzero <- n - length(zeros)
-  exp_quantiles <- qexp(1:nonzero / (nonzero + 1), rate = rate)
-  return(c(zeros, exp_quantiles))
-    
-}
-```
 
 # Comparisons
 
@@ -200,14 +169,6 @@ ggplot() +
 # Priors and Truths
 
 Set up a function that solves for the value of lambda that makes the prior as close as possible to the true data passed in. 
-
-```{r}
-met <- function(lam, sig2 = 1, n, truth) {
-  rate <- (n*lam) / sig2
-  prior <- qexp((1:length(truth)) / (length(truth) + 1), rate = rate)
-  return(proxy_dist(prior, truth))
-}
-```
 
 The ideal coverage lambda would in theory be set in a way that minimizes the distance between the truth and the prior.... well... maybe if the prior is a good one.
 

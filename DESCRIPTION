@@ -9,7 +9,10 @@ Depends:
   ggplot2,
   magrittr,
   dplyr,
-  stringr
+  stringr,
+  knitr,
+  Matrix,
+  hdrm
 License: GPL-3
 LazyData: TRUE
 VignetteBuilder: knitr
