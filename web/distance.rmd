@@ -51,7 +51,7 @@ proxy_dist(x, y) ## Converge in the limit for normal example
 We may then want to understand how the distributions differ from one another. Here, we will conceptualize the first distribution as being the prior and the second being the true underlying distribution of the coefficients. Of interest is how far we need to move the true distribution to match the prior.
 
 ```{r}
-rlr(x, y)
+rlt(x, y)
 ```
 
 
@@ -65,7 +65,7 @@ truth <- discrete_mixture(n = sz)
 prior <- qexp(1:sz / (sz + 1), rate = 1)
 proxy_dist(prior, truth)
 wasserstein_metric(truth,prior,p=2)
-rlr(prior, truth)
+rlt(prior, truth)
 ```
 
 
@@ -78,7 +78,7 @@ If we set the rate to 2 for the "truth", both metrics increase.
 truth <- discrete_mixture(n = sz, rate = 2)
 wasserstein_metric(truth,prior,p=2)
 proxy_dist(prior, truth)
-rlr(prior, truth)
+rlt(prior, truth)
 ```
 
 If we change pzero to be .7, as expected, both decrease.
@@ -88,7 +88,7 @@ If we change pzero to be .7, as expected, both decrease.
 truth <- discrete_mixture(n = sz, rate = 1, pzero = .7)
 wasserstein_metric(truth,prior,p=2)
 proxy_dist(prior, truth)
-rlr(prior, truth)
+rlt(prior, truth)
 ```
 
 If we set the "truth" to be equal to the prior, we see that both metric produce zero.
@@ -97,7 +97,7 @@ If we set the "truth" to be equal to the prior, we see that both metric produce 
 truth <- discrete_mixture(n = sz, rate = 1, pzero = 0)
 wasserstein_metric(truth,prior,p=2)
 proxy_dist(prior, truth)
-rlr(prior, truth)
+rlt(prior, truth)
 ```
 
 From here, we can increase the rate, and here we see the expected relation with an increase in the metrics.
@@ -106,7 +106,7 @@ From here, we can increase the rate, and here we see the expected relation with 
 truth <- discrete_mixture(n = sz, rate = 2, pzero = 0)
 wasserstein_metric(truth,prior,p=2)
 proxy_dist(prior, truth)
-rlr(prior, truth)
+rlt(prior, truth)
 ```
 
 And if we increase the densitiy at zero, we increase the distance metrics.
@@ -116,7 +116,7 @@ And if we increase the densitiy at zero, we increase the distance metrics.
 truth <- discrete_mixture(n = sz, rate = 2, pzero = .5)
 wasserstein_metric(truth,prior,p=2)
 proxy_dist(prior, truth)
-rlr(prior, truth)
+rlt(prior, truth)
 ```
 
 # Visualize the effect of rate and pzero
@@ -150,18 +150,18 @@ ggplot() +
 
 This is certainly anisotropic... which is interesting.
 
-Now let us consider the rl ratio:
-
-```{r}
-rlrs <- apply(grd, 1, function(x) {
+```{r, include=FALSE}
+## Now let us consider the rl ratio:
+rlts <- apply(grd, 1, function(x) {
   truth <- discrete_mixture(n = sz, rate = x[1], pzero = x[2])
-  rlr(prior, truth)
+  tmp <- rlt(prior, truth)
+  tmp[[2]] / tmp[[1]]
 })
 ```
 
 
-```{r}
-df <- data.frame(rate = grd$Var1, pzero = grd$Var2, dist = rlrs)
+```{r, include = FALSE}
+df <- data.frame(rate = grd$Var1, pzero = grd$Var2, dist = rlts)
 ggplot() +
   geom_tile(data = df, aes(x = rate, y = pzero, fill = dist)) +
   coord_cartesian(ylim = c(0, .05)) +
@@ -170,9 +170,7 @@ ggplot() +
   theme_minimal() +
   geom_line(data = data.frame(x = c(1, 1), y = c(0, .11)), aes(x = x, y = y)) +
   geom_line(data = data.frame(x = c(.05, 1.45), y = c(0, 0)), aes(x = x, y = y))
-
 ```
-
 
 # Priors and Truths
 

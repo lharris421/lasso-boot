@@ -250,6 +250,23 @@ a <- length(betas)
 ```
 
 
+```{r}
+truth <- c(rep(0, p - length(betas)), betas)
+(lambda <- optimize(met, interval = c(1e-3, 1e2), n = n, truth = truth)$minimum)
+```
+
+#### Optimize + Pairs
+
+```{r}
+eval_scenario("boot_lambda", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = lambda)
+```
+
+#### Optimize + Rx
+
+```{r}
+eval_scenario("boot_lambda", type1 = "Rx", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = lambda)
+```
+
 #### Boot + Pairs
 
 ```{r}
@@ -268,6 +285,20 @@ What happens if under the same conditions we increase the sample size?
 
 ```{r}
 n <- 500
+
+truth <- c(rep(0, p - length(betas)), betas)
+(lambda <- optimize(met, interval = c(1e-3, 1e2), n = n, truth = truth)$minimum)
+```
+
+#### Optimize + Pairs
+
+```{r}
+eval_scenario("boot_lambda", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = lambda)
+```
+
+#### Boot + Pairs
+
+```{r}
 eval_scenario("largerN", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, iterations = 100, lambda = "boot", coverage = .8)
 ```
 
@@ -279,22 +310,22 @@ n <- 160
 b <- 2
 betas <- c(seq(0.5, 5, by = .5)) * rep(c(1, -1), 5)
 a <- length(betas)
+
+truth <- c(rep(0, p - length(betas)), betas)
+(lambda <- optimize(met, interval = c(1e-3, 1e2), n = n, truth = truth)$minimum)
 ```
 
+#### Optimize + Pairs
 
-
-```{r, eval = FALSE}
-eval_scenario("increasing", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = "boot")
+```{r}
+eval_scenario("boot_lambda", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = lambda)
 ```
-
 
 # Evaluating Distance
 
 ## Exponential
 
 Here is an example where the true betas are generated from an exponential prior.
-
-### Optimize
 
 ```{r}
 n <- 300
@@ -305,6 +336,8 @@ betas <- qexp(1:p / (p+1), rate = rt(.015, n = 300))
 truth <- c(rep(0, p - length(betas)), betas)
 (lambda <- optimize(met, interval = c(1e-3, 1e2), n = n, truth = truth)$minimum)
 ```
+
+### Optimize
 
 ```{r}
 eval_scenario("dist", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = lambda)
