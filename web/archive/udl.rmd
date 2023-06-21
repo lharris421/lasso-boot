@@ -1,0 +1,16 @@
+---
+title: "Understanding Distance Metric"
+output: 
+  html_document:
+    toc: FALSE
+---
+
+
+# Link
+
+[App](https://loganharris.shinyapps.io/app_update/)
+
+```{r}
+knitr::include_url("https://loganharris.shinyapps.io/app_update/")
+```
+

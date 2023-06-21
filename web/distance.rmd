@@ -8,6 +8,14 @@ output:
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
+# App
+
+[App](https://loganharris.shinyapps.io/app_update/)
+
+```{r}
+knitr::include_url("https://loganharris.shinyapps.io/app_update/")
+```
+
 # waddR
 
 While looking information on Wasserstein distance and potential implementations in R, I came across the package `waddR`. Here, we see an example passing in observations from two normal distributions.

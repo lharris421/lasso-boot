@@ -214,7 +214,7 @@ eval_scenario <- function(name, type1, type2, lambda, coverage = .8, force = FAL
   all_betas <- tmp_dat$beta
   nm <- paste0(c(name, type1, type2, coverage, lambda, n, p, a, b, rho, R, iterations, ".rds"), collapse = "_")
   
-  all_files <- list.files("/Users/loganharris/github/dissertation/storage")
+  all_files <- list.files("/Users/loganharris/github/lasso-boot/storage")
   
   if (!(nm %in% all_files) | force) {
     
@@ -223,12 +223,12 @@ eval_scenario <- function(name, type1, type2, lambda, coverage = .8, force = FAL
                 lambda = lambda,
                 n = n, p = p, a = a, b = b, rho = rho, 
                 R = R, betas = betas, coverage = coverage)
-    save(tmp, file = paste0("/Users/loganharris/github/dissertation/storage/", nm))
+    save(tmp, file = paste0("/Users/loganharris/github/lasso-boot/storage/", nm))
     summarise_cov(tmp, coverage = coverage, all_betas)
     
   } else {
     
-    load(paste0("/Users/loganharris/github/dissertation/storage/", nm))
+    load(paste0("/Users/loganharris/github/lasso-boot/storage/", nm))
     summarise_cov(tmp, coverage = coverage, all_betas)
     
   }

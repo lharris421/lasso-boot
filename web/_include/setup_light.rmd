@@ -1,8 +1,21 @@
 ```{r knitr_setup, include=FALSE, purl=FALSE}
 library(shiny)
 library(shinyjs)
+library(ggplot2)
 library(DT)
-library(lassoboot)
+
 set.seed(1234)
 ## devtools::load_all(quiet = TRUE)
+
+rlt <- function(dist1, dist2) {
+  move <- sort(abs(dist1)) - sort(abs(dist2))
+  move_left <- abs(sum(move[move < 0]))
+  move_right <- sum(move[move > 0])
+  total_move <- sum(abs(move))
+  return(list(move_left, move_right, total_move))
+}
+
+proxy_dist <- function(dist1, dist2) {
+  mean(abs(sort(abs(dist1)) - sort(abs(dist2))))
+}
 ```
