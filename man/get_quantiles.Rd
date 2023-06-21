@@ -7,11 +7,11 @@
 get_quantiles(quantile_functions, weights, len)
 }
 \arguments{
-\item{quantile_functions}{}
+\item{quantile_functions}{holder}
 
-\item{weights}{}
+\item{weights}{holder}
 
-\item{len}{}
+\item{len}{holder}
 }
 \description{
 Title

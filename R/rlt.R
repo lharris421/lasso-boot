@@ -1,7 +1,7 @@
 #' Title
 #'
-#' @param dist1 
-#' @param dist2 
+#' @param dist1 holder
+#' @param dist2 holder
 #'
 #' @return
 #' @export

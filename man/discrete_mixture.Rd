@@ -7,11 +7,11 @@
 discrete_mixture(pzero = 0.8, rate = 1, n = 1e+05)
 }
 \arguments{
-\item{pzero}{}
+\item{pzero}{holder}
 
-\item{rate}{}
+\item{rate}{holder}
 
-\item{n}{}
+\item{n}{holder}
 }
 \description{
 Title

@@ -7,9 +7,9 @@
 rlt(dist1, dist2)
 }
 \arguments{
-\item{dist1}{}
+\item{dist1}{holder}
 
-\item{dist2}{}
+\item{dist2}{holder}
 }
 \description{
 Title

@@ -1,8 +1,8 @@
 #' Title
 #'
-#' @param pzero 
-#' @param rate 
-#' @param n 
+#' @param pzero holder
+#' @param rate holder
+#' @param n holder
 #'
 #' @return
 #' @export

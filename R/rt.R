@@ -1,8 +1,8 @@
 #' Title
 #'
-#' @param lam 
-#' @param n 
-#' @param sig2 
+#' @param lam holder
+#' @param n holder
+#' @param sig2 holder
 #'
 #' @return
 #' @export

@@ -1,8 +1,8 @@
 #' Title
 #'
-#' @param quantile_functions 
-#' @param weights 
-#' @param len 
+#' @param quantile_functions holder
+#' @param weights holder
+#' @param len holder
 #'
 #' @return
 #' @export

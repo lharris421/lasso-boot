@@ -7,11 +7,11 @@
 rt(lam, n, sig2 = 1)
 }
 \arguments{
-\item{lam}{}
+\item{lam}{holder}
 
-\item{n}{}
+\item{n}{holder}
 
-\item{sig2}{}
+\item{sig2}{holder}
 }
 \description{
 Title

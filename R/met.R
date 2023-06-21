@@ -1,9 +1,9 @@
 #' Title
 #'
-#' @param lam 
-#' @param sig2 
-#' @param n 
-#' @param truth 
+#' @param lam holder
+#' @param sig2 holder
+#' @param n holder
+#' @param truth holder
 #'
 #' @return
 #' @export

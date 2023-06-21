@@ -7,13 +7,13 @@
 met(lam, sig2 = 1, n, truth)
 }
 \arguments{
-\item{lam}{}
+\item{lam}{holder}
 
-\item{sig2}{}
+\item{sig2}{holder}
 
-\item{n}{}
+\item{n}{holder}
 
-\item{truth}{}
+\item{truth}{holder}
 }
 \description{
 Title

@@ -1,0 +1,7 @@
+```{r knitr_setup, include=FALSE, purl=FALSE}
+library(shiny)
+library(shinyjs)
+library(DT)
+set.seed(1234)
+devtools::load_all(quiet = TRUE)
+```

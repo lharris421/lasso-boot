@@ -1,3 +1,21 @@
+#' Title
+#'
+#' @param n holder
+#' @param p holder
+#' @param a holder
+#' @param b holder
+#' @param rho holder
+#' @param family holder
+#' @param signal holder
+#' @param noise holder
+#' @param rho.noise holder
+#' @param beta holder
+#' @param SNR holder
+#'
+#' @return
+#' @export
+#'
+#' @examples
 genDataABN <- function (n = 100, p = 60, a = 6, b = 2, rho = 0.5, family = c("gaussian", 
                                                                "binomial"), signal = c("homogeneous", "heterogeneous"), 
           noise = c("exchangeable", "autoregressive"), rho.noise = 0, 

@@ -7,15 +7,11 @@ output:
     toc: FALSE
 ---
 
-```{r setup, child = '_include/setup.rmd'}
+```{r setup, child = '_include/setup_light.rmd'}
 ```
 
 
-```{r, echo = FALSE, out.width = "100%", out.height = "900px"}
-library(shiny)
-library(shinyjs)
-library(DT)
-
+```{r, echo = FALSE}
 available_distributions <- c("Cauchy", "Chi-Squared", "Exponential", 
                             "F", "Gamma", "Log-Normal", "Normal", "Student's t", 
                             "Uniform")
