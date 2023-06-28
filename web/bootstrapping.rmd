@@ -46,11 +46,9 @@ resid <- hiv_fit$y - predict(hiv_fit, lambda = hiv_cv$lambda.min, X = X)
 plot(y, resid, xlab = "Y", ylab = "residual")
 ```
 
-# Four Different Methods
-
-For this example data set, the three methods still produce noticeably different results. In general, the reasoning behind using "pairs" in a high dimensional setting seems to be most logical and will be the main focus in the near future. This is two fold: 1) Sampling cases implies that $\boldsymbol{X}$ is random which is likely always the case in high dimensional settings and 2) it makes the fewest assumptions. The other two both at a minimum make an assumption of homoscedasticity which is assuredly the case in a high dimensional setting.
-
 ## Pairs
+
+In general, the reasoning behind using "pairs" in a high dimensional setting seems to be most logical and will be the main focus in the near future. This is two fold: 1) Sampling cases implies that $\boldsymbol{X}$ is random which is likely always the case in high dimensional settings and 2) it makes the fewest assumptions.
 
 ```{r}
 tmp <- boot_ncvreg(hiv_fit, lambda = hiv_cv$lambda.min, R = 100, seed = 1234, progress = progress)
@@ -58,23 +56,9 @@ tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
 plot(tmp_boot_ci, n = 20)
 ```
 
-## Residual
-
-```{r}
-tmp <- boot_ncvreg(hiv_fit, lambda = hiv_cv$lambda.min, R = 100, type = "residual", seed = 12345, progress = progress)
-tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
-plot(tmp_boot_ci, n = 20)
-```
-
-## Parametric
-
-```{r}
-tmp <- boot_ncvreg(hiv_cv, lambda = hiv_cv$lambda.min, R = 100, type = "parametric", seed = 1234, progress = progress)
-tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
-plot(tmp_boot_ci, n = 20)
-```
-
 ## Rx
+
+An alternative method is what I call the random X bootstrap. This still allows resampling of X, but instead of taking the respective y, it predicts the value of y then draws a residual from a distribution based on the fitted value of y. The main assumption here is that the residuals are normal but not necessarily mean zero or homoscedastic.
 
 ```{r}
 tmp <- boot_ncvreg(hiv_cv, lambda = hiv_cv$lambda.min, R = 100, type = "Rx", seed = 1234, progress = progress)
@@ -82,6 +66,7 @@ tmp_boot_ci <- boot_ci_ncvreg(tmp, type = "percentile")
 plot(tmp_boot_ci, n = 20)
 ```
 
+That said, for now I will focus my effort on the pairs bootstrap.
 
 # Simulations
 
@@ -103,9 +88,6 @@ y <- tmp_dat$y
 plot(tmp_fit$y, resid, xlab ="Y", ylab = "residual")
 ```
 
-
-
-
 ## Examples
 
 ### Bootstrap: Pairs
@@ -123,22 +105,6 @@ fit <- ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")
 boot_pairs <- boot_ncvreg(fit, lambda = "boot", progress = progress); boot_pairs$lambda
 boot_ci_pairs <- boot_ci_ncvreg(boot_pairs, type = "percentile", coverage = .8)
 plot(boot_ci_pairs, n = 10)
-```
-
-### Bootstrap: Residual
-
-```{r}
-boot <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda.min, R = 100, type = "residual", progress = progress)
-boot_ci <- boot_ci_ncvreg(boot, type = "percentile", coverage = .8)
-plot(boot_ci, n = 10)
-```
-
-### Bootstrap: Parametric
-
-```{r}
-boot_para <- boot_ncvreg(cv_fit, lambda = cv_fit$lambda.min, R = 100, type = "parametric", progress = progress)
-boot_ci_para <- boot_ci_ncvreg(boot_para, type = "percentile", coverage = .8)
-plot(boot_ci_para, n = 10)
 ```
 
 ### Rx
@@ -169,6 +135,9 @@ sim <- function(type1, type2, lambda, recenter = FALSE, robust = FALSE,
     if (lambda == "cv") {
       fit <- cv.ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")
       lambda <- fit$lambda.min; if (i == 1) print(lambda)
+    } else if (lambda == "eta") {
+      lambda <- min_lp_dist(tmp_dat$X, tmp_dat$y, tmp_dat$beta); if (i == 1) print(lambda)
+      fit <- ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")  
     } else {
       fit <- ncvreg(tmp_dat$X, tmp_dat$y, penalty = "lasso")  
     }
@@ -255,11 +224,19 @@ truth <- c(rep(0, p - length(betas)), betas)
 (lambda <- optimize(met, interval = c(1e-3, 1e2), n = n, truth = truth)$minimum)
 ```
 
+
 #### Optimize + Pairs
 
 ```{r}
 eval_scenario("boot_lambda", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = lambda)
 ```
+
+#### Optimize eta + pairs
+
+```{r}
+eval_scenario("optimize_eta", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = "eta")
+```
+
 
 #### Optimize + Rx
 
@@ -302,6 +279,12 @@ eval_scenario("boot_lambda", type1 = "pairs", type2 = "percentile", n = n, p = p
 eval_scenario("largerN", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, iterations = 100, lambda = "boot", coverage = .8)
 ```
 
+#### Eta + Pairs
+
+```{r}
+eval_scenario("largerN", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, iterations = 100, lambda = "eta", coverage = .8)
+```
+
 ### Increasing values of betas
 
 ```{r}
@@ -319,6 +302,12 @@ truth <- c(rep(0, p - length(betas)), betas)
 
 ```{r}
 eval_scenario("boot_lambda", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = lambda)
+```
+
+#### Eta + Pairs
+
+```{r}
+eval_scenario("boot_lambda", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, seed = 43211234, lambda = "eta")
 ```
 
 # Evaluating Distance
@@ -341,6 +330,12 @@ truth <- c(rep(0, p - length(betas)), betas)
 
 ```{r}
 eval_scenario("dist", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = lambda)
+```
+
+### Eta
+
+```{r}
+eval_scenario("dist", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, lambda = "eta")
 ```
 
 ### CV
@@ -374,7 +369,14 @@ betas <- qunif(1:p / (p+1), min = -1, max = 1)
 ```{r}
 truth <- c(rep(0, p - length(betas)), betas)
 (lambda <- optimize(met, interval = c(1e-3, 1e2), n = n, truth = truth)$minimum)
+
 eval_scenario("uniform", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, lambda = lambda)
+```
+
+### Eta
+
+```{r}
+eval_scenario("uniform", type1 = "pairs", type2 = "percentile", n = n, p = p, a = a, b = b, betas = betas, R = 100, lambda = "eta")
 ```
 
 ### CV

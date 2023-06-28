@@ -2,6 +2,8 @@ title: "Dissertation Work"
 left:
   - text: "Bootstrapping: ncvreg"
     href: bootstrapping.html
+  - text: "Coverage"
+    href: coverage.html
   - text: "Distance"
     href: distance.html
   - text: "Bootstrapping Verification (lm)"

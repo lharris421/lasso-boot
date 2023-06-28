@@ -1,0 +1,99 @@
+---
+title: "True Bootstrap Distributions"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, child = 'web/_include/setup.rmd'}
+```
+
+# Soft Threshold
+
+```{r}
+soft_thresh <- function(z, lambda) {
+  if (z > lambda) {
+    return(z - lambda)
+  } else if (abs(z) <= lambda) {
+    return(0)
+  } else if (z < -lambda) {
+    return(z + lambda)
+  }
+}
+```
+
+
+# Truth (no bootstrap)
+
+
+```{r}
+true_betas <- seq(0, 3, by = .25)
+lambdas <- seq(0, 3, by = .25)
+sim_size <- 100
+boot_size <- 100
+sigma <- 1; n <- 10
+
+res <- matrix(nrow = length(true_betas), ncol = length(lambdas))
+for (j in 1:length(lambdas)) {
+  for (i in 1:length(true_betas)) {
+    covered <- numeric(sim_size)
+    for (h in 1:sim_size) {
+      zjs <- rnorm(boot_size, true_betas[i], sd = sqrt(sigma/n))
+      bhats <- sapply(zjs, soft_thresh, lambdas[j])
+      CI <- quantile(bhats, c(0.1, 0.9))
+      covered[h] <- true_betas[i] >= CI[1] & true_betas[i] <= CI[2]  
+    }
+    res[i,j] <- mean(covered)
+  } 
+}
+
+rownames(res) <- true_betas
+colnames(res) <- lambdas
+
+kable(res)
+```
+
+
+
+
+# Bootstrap
+
+Here we will make a few assumptions.
+
+First, we are just going to assume that the predictors are from an orthonormal design and we will first consider just one covariate at a time. Scaling up the result then just depends on combining the results from individual predictors.
+
+We will generate both y and X from a normal(0,1)
+
+```{r}
+res2 <- matrix(nrow = length(true_betas), ncol = length(lambdas))
+for (j in 1:length(lambdas)) {
+  for (i in 1:length(true_betas)) {
+    covered <- numeric(sim_size)
+    for (h in 1:sim_size) {
+      
+      ## Original values
+      x <- rnorm(n)
+      y <- true_betas[i]*x + rnorm(n)
+      
+      for (k in 1:boot_size) {
+          xnew <- sample(x, replace = TRUE); xnew <- ncvreg::std(xnew)
+          ynew <- sample(y, replace = TRUE); ynew <- ynew - mean(ynew)
+
+          z <- t(xnew) %*% ynew / n
+          bhats[k] <- soft_thresh(z, lambdas[j]) * attr(xnew, "scale")
+      }
+      
+      CI <- quantile(bhats, c(0.1, 0.9))
+      covered[h] <- true_betas[i] >= CI[1] & true_betas[i] <= CI[2]  
+    }
+    res2[i,j] <- mean(covered)
+  } 
+}
+
+rownames(res2) <- true_betas
+colnames(res2) <- lambdas
+
+kable(res2) 
+```
+
+
