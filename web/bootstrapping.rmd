@@ -70,6 +70,8 @@ That said, for now I will focus my effort on the pairs bootstrap.
 
 # Simulations
 
+- show what values of lambda
+
 ## Setup
 
 ```{r}

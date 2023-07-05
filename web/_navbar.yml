@@ -4,6 +4,10 @@ left:
     href: bootstrapping.html
   - text: "Coverage"
     href: coverage.html
+  - text: "Bayesian Motivation"
+    href: bayes.html
+  - text: "Simple Bayes"
+    href: bayes_simple.html
   - text: "Distance"
     href: distance.html
   - text: "Bootstrapping Verification (lm)"

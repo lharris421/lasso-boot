@@ -1,0 +1,103 @@
+---
+title: "Simple Bayes"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, child = 'web/_include/setup.rmd'}
+```
+
+# Through quantile functions
+
+```{r}
+dlaplace <- function(x, rate = 1) {
+  dexp(abs(x), rate) / 2
+} 
+
+qlaplace <- function(p, rate = 1) {
+  if (p <= .5) {
+    p <- (.5 - p)*2
+    qexp(p, rate)*-1
+  } else {
+    p <- (p - .5)*2
+    qexp(p, rate)
+  }
+}
+
+
+rlaplace <- function(n, rate = 1) {
+  rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
+}
+```
+
+
+
+```{r}
+denom <- integrate(function(x) dnorm(x, mean = 0, sd = 1)*dlaplace(x), lower = -Inf, upper = Inf)
+integrate(function(x) dnorm(x, mean = 0, sd = 1)*dlaplace(x)*(1/denom$value), lower = -Inf, upper = 0)
+```
+
+
+```{r}
+obj <- function(q, p, mean, sd, rate) {
+  denom <- integrate(function(x) dnorm(x, mean, sd)*dlaplace(x, rate), lower = -Inf, upper = Inf)
+  abs(p - integrate(function(x) dnorm(x, mean, sd)*dlaplace(x, rate)*(1/denom$value), lower = -Inf, upper = q)$value)
+}
+
+post_quant <- function(p, mean, sd, rate) {
+  optimize(obj, lower = -10, upper = 10, p = p, mean = mean, sd = sd, rate = rate)$minimum
+}
+```
+
+```{r}
+eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
+  
+  ## set.seed(12345)
+  dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n)
+  
+  tbeta <- dat$beta
+  X <- dat$X
+  y <- dat$y
+  
+  lowers <- matrix(nrow = niter, ncol = length(tbeta))
+  uppers <- matrix(nrow = niter, ncol = length(tbeta))
+  for (i in 1:niter) {
+    
+    idx_new <- sample(1:length(y), replace = TRUE)
+    ynew <- y[idx_new]
+    xnew <- X[idx_new,,drop=FALSE]
+    
+    cv_res <- cv.ncvreg(xnew, ynew, penalty = "lasso")
+    sigma2 <- 1
+    lam <- cv_res$lambda.min
+    coefs <- coef(cv_res$fit, lambda = lam)
+    rate <- (lam*n / sigma2)
+    
+    ## Beta specific
+    for (j in 1:length(tbeta)) {
+      
+      r <- ynew - (coefs[1] + xnew[,-j] %*% coefs[-1][-j])
+      
+      mu <- t(xnew[,j,drop=FALSE]) %*% r
+      
+      lowers[i,j] <- post_quant(.1, mu, sigma2, rate) 
+      uppers[i,j] <- post_quant(.9, mu, sigma2, rate)
+      
+    }
+    
+  }
+  
+  return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta))
+  
+}
+
+
+```
+
+```{r}
+beta0 <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100)
+c(mean(beta0$lower), mean(beta0$upper))
+```
+
+

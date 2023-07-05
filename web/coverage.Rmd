@@ -8,6 +8,9 @@ output:
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
+- look into posterior in 1 dimension
+- what does the bayesian posterior look like?
+
 # Soft Threshold
 
 ```{r}
@@ -28,33 +31,11 @@ soft_thresh <- function(z, lambda) {
 
 ```{r}
 true_betas <- seq(0, 3, by = .25)
-lambdas <- seq(0, 3, by = .25)
+lambdas <- seq(0, 2, by = .25)
 sim_size <- 100
 boot_size <- 100
-sigma <- 1; n <- 10
-
-res <- matrix(nrow = length(true_betas), ncol = length(lambdas))
-for (j in 1:length(lambdas)) {
-  for (i in 1:length(true_betas)) {
-    covered <- numeric(sim_size)
-    for (h in 1:sim_size) {
-      zjs <- rnorm(boot_size, true_betas[i], sd = sqrt(sigma/n))
-      bhats <- sapply(zjs, soft_thresh, lambdas[j])
-      CI <- quantile(bhats, c(0.1, 0.9))
-      covered[h] <- true_betas[i] >= CI[1] & true_betas[i] <= CI[2]  
-    }
-    res[i,j] <- mean(covered)
-  } 
-}
-
-rownames(res) <- true_betas
-colnames(res) <- lambdas
-
-kable(res)
+sigma <- 1; n <- 100
 ```
-
-
-
 
 # Bootstrap
 
@@ -65,7 +46,8 @@ First, we are just going to assume that the predictors are from an orthonormal d
 We will generate both y and X from a normal(0,1)
 
 ```{r}
-res2 <- matrix(nrow = length(true_betas), ncol = length(lambdas))
+res <- matrix(nrow = length(true_betas), ncol = length(lambdas))
+
 for (j in 1:length(lambdas)) {
   for (i in 1:length(true_betas)) {
     covered <- numeric(sim_size)
@@ -75,9 +57,11 @@ for (j in 1:length(lambdas)) {
       x <- rnorm(n)
       y <- true_betas[i]*x + rnorm(n)
       
+      bhats <- numeric(boot_size)
       for (k in 1:boot_size) {
-          xnew <- sample(x, replace = TRUE); xnew <- ncvreg::std(xnew)
-          ynew <- sample(y, replace = TRUE); ynew <- ynew - mean(ynew)
+        idx <- sample(1:length(x), replace = TRUE)
+        xnew <- x[idx]; xnew <- ncvreg::std(xnew)
+        ynew <- y[idx]; ynew <- ynew - mean(ynew)
 
           z <- t(xnew) %*% ynew / n
           bhats[k] <- soft_thresh(z, lambdas[j]) * attr(xnew, "scale")
@@ -86,14 +70,22 @@ for (j in 1:length(lambdas)) {
       CI <- quantile(bhats, c(0.1, 0.9))
       covered[h] <- true_betas[i] >= CI[1] & true_betas[i] <= CI[2]  
     }
-    res2[i,j] <- mean(covered)
+    res[i,j] <- mean(covered)
   } 
 }
 
-rownames(res2) <- true_betas
-colnames(res2) <- lambdas
+library(dplyr)
+library(tidyr)
 
-kable(res2) 
+colnames(res) <- lambdas
+res %>%
+  data.frame() %>%
+  mutate(beta = true_betas) %>%
+  pivot_longer(cols = !beta) %>%
+  mutate(name = as.numeric(str_remove(name, "X"))) %>%
+  rename(lambda = name, coverage = value) %>%
+  ggplot(aes(x = beta, y = coverage, group = lambda, color = lambda)) +
+  geom_line()
 ```
 
 
