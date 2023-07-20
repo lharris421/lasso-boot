@@ -5,6 +5,12 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+To do:
+- impliment simple
+- consider moving cv out, run once
+- double check what the intervals look live 
+- get plots similar to those on coverage page but for updated bootstrap method
+
 Idea pulled from derivation here: http://www.math.chalmers.se/Stat/Grundutb/GU/MSA220/S18/bayeslasso.pdf
 
 Steps in interval construction:

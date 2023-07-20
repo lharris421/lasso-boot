@@ -25,7 +25,6 @@ qlaplace <- function(p, rate = 1) {
   }
 }
 
-
 rlaplace <- function(n, rate = 1) {
   rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
 }
@@ -34,20 +33,35 @@ rlaplace <- function(n, rate = 1) {
 
 
 ```{r}
-denom <- integrate(function(x) dnorm(x, mean = 0, sd = 1)*dlaplace(x), lower = -Inf, upper = Inf)
-integrate(function(x) dnorm(x, mean = 0, sd = 1)*dlaplace(x)*(1/denom$value), lower = -Inf, upper = 0)
-```
-
-
-```{r}
-obj <- function(q, p, mean, sd, rate) {
-  denom <- integrate(function(x) dnorm(x, mean, sd)*dlaplace(x, rate), lower = -Inf, upper = Inf)
-  abs(p - integrate(function(x) dnorm(x, mean, sd)*dlaplace(x, rate)*(1/denom$value), lower = -Inf, upper = q)$value)
+ll <- function(beta, partial_residuals, sigma, xvar) {
+  
+  # Compute the log-likelihood(s)
+  tmp <- sapply(beta, function(x) sum(dnorm(partial_residuals - xvar*x, mean = 0, sd = sigma, log = TRUE)))
+  return(tmp)
+  
 }
 
-post_quant <- function(p, mean, sd, rate) {
-  optimize(obj, lower = -10, upper = 10, p = p, mean = mean, sd = sd, rate = rate)$minimum
+
+obj <- function(beta, p, sigma, rate, xvar, partial_residuals) {
+  
+  denom <- integrate(
+    function(x) {
+      prior <- log(dlaplace(x, rate = rate))
+      llik <- ll(beta = x, partial_residuals, sigma, xvar)
+      exp(prior + llik)
+    }, lower = -Inf, upper = Inf, subdivisions = 1e4)
+  
+  ## print(integrate(function(x) exp(log(dlaplace(x, rate)) + ll(x, partial_residuals, sigma, xvar))*(1/denom$value), lower = -Inf, upper = Inf, subdivisions = 1e4)$value)
+  abs(p - integrate(function(x) exp(log(dlaplace(x, rate)) + ll(x, partial_residuals, sigma, xvar))*(1/denom$value), lower = -Inf, upper = beta, subdivisions = 1e4)$value)
+  
 }
+
+post_quant <- function(p, sigma, rate, x, partial_residuals) {
+  tmp <- optimize(obj, lower = -10, upper = 10, p = p, sigma = sigma, rate = rate, xvar = x, partial_residuals = partial_residuals)
+  print(tmp)
+  return(tmp$minimum)
+}
+
 ```
 
 ```{r}
@@ -69,7 +83,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
     xnew <- X[idx_new,,drop=FALSE]
     
     cv_res <- cv.ncvreg(xnew, ynew, penalty = "lasso")
-    sigma2 <- 1
+    sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]
     lam <- cv_res$lambda.min
     coefs <- coef(cv_res$fit, lambda = lam)
     rate <- (lam*n / sigma2)
@@ -79,10 +93,8 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
       
       r <- ynew - (coefs[1] + xnew[,-j] %*% coefs[-1][-j])
       
-      mu <- t(xnew[,j,drop=FALSE]) %*% r
-      
-      lowers[i,j] <- post_quant(.1, mu, sigma2, rate) 
-      uppers[i,j] <- post_quant(.9, mu, sigma2, rate)
+      lowers[i,j] <- post_quant(.1, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r) 
+      uppers[i,j] <- post_quant(.9, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r)
       
     }
     
@@ -96,8 +108,10 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
 ```
 
 ```{r}
-beta0 <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100)
-c(mean(beta0$lower), mean(beta0$upper))
+beta0 <- eb_boot(beta = 0, p = 1, b = 0, n = 100, niter = 10)
 ```
 
+```{r}
+beta0
+```
 
