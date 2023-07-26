@@ -1,0 +1,30 @@
+---
+title: "Meeting Notes"
+output:
+  html_document:
+    code_folding: hide
+---
+
+# Running To-Do
+
+- Visualize the posterior in a single dimension for Bayesian bootstraps
+- Double check what the intervals look like (in terms of average width, # times width = 0 still)
+- Create mre for "Error: Supplied lambda value(s) are outside the range of the model fit."
+
+# Reading List
+
+# July 26th, 2023
+
+## To Discuss
+
+- Initial results from "Simple Empirical Bayes Bootstrapped Confidence Intervals"
+  - The results look bizarre, particularly for variables with zero as the true coefficient.
+- Efficient Empirical Bayes Variable Selection and Estimation in Linear Models
+  - The paper suggests a method in which under specific conditions the Lasso can be used as a computational short cut for model selection / estimation using a specific hierarchical prior for a linear model. With this, the authors also propose a way to select lambda and estimate $\sigma^2$ (and hence obtaining the final model as the lasso solution).
+- Would we like to set up a drop box to store data objects?
+
+## Notes
+
+## Action Items
+
+## References

@@ -1670,16 +1670,16 @@ border-radius: 0px;
   <a href="coverage.html">Coverage</a>
 </li>
 <li>
-  <a href="bayes.html">Bayesian Motivation</a>
+  <a href="bayes.html">Emperical Bayes Bootstrap Intervals</a>
 </li>
 <li>
-  <a href="bayes_simple.html">Simple Bayes</a>
+  <a href="bayes_simple.html">Simple Emperical Bayes Bootstrap Intervals</a>
 </li>
 <li>
   <a href="distance.html">Distance</a>
 </li>
 <li>
-  <a href="bootstrapping_lm.html">Bootstrapping Verification (lm)</a>
+  <a href="meeting_notes.html">Meeting Notes</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -1715,13 +1715,9 @@ $(function() {
 <div class="container" style="max-width: 1200px; border-top: 1px solid #cccccc">
 <p><span class="text-muted">By Logan Harris, Advised by Patrick
 Breheny</span> <span class="text-muted" style="float: right">Last
-updated 2023-07-05 15:43</span></p>
+updated 2023-07-26 14:56</span></p>
 </div>
 </div>
-<ul>
-<li>look into posterior in 1 dimension</li>
-<li>what does the bayesian posterior look like?</li>
-</ul>
 <div id="soft-threshold" class="section level1">
 <h1>Soft Threshold</h1>
 <pre class="r"><code>soft_thresh &lt;- function(z, lambda) {
@@ -1734,16 +1730,13 @@ updated 2023-07-05 15:43</span></p>
   }
 }</code></pre>
 </div>
-<div id="truth-no-bootstrap" class="section level1">
-<h1>Truth (no bootstrap)</h1>
+<div id="bootstrap" class="section level1">
+<h1>Bootstrap</h1>
 <pre class="r"><code>true_betas &lt;- seq(0, 3, by = .25)
 lambdas &lt;- seq(0, 2, by = .25)
 sim_size &lt;- 100
 boot_size &lt;- 100
 sigma &lt;- 1; n &lt;- 100</code></pre>
-</div>
-<div id="bootstrap" class="section level1">
-<h1>Bootstrap</h1>
 <p>Here we will make a few assumptions.</p>
 <p>First, we are just going to assume that the predictors are from an
 orthonormal design and we will first consider just one covariate at a

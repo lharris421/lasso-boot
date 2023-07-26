@@ -6,9 +6,6 @@ output: html_document
 ---
 
 To do:
-- impliment simple
-- consider moving cv out, run once
-- double check what the intervals look live 
 - get plots similar to those on coverage page but for updated bootstrap method
 
 Idea pulled from derivation here: http://www.math.chalmers.se/Stat/Grundutb/GU/MSA220/S18/bayeslasso.pdf
@@ -114,6 +111,7 @@ eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, niter = 100, nboot = 100) 
 
   overall_cov <- numeric(nboot)
   indiv_cov <- matrix(nrow = nboot, ncol = p)
+  indiv_width <- matrix(nrow = nboot, ncol = p)
   
   pb <- txtProgressBar(1, nboot, style=3)
   
@@ -126,6 +124,7 @@ eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, niter = 100, nboot = 100) 
     upper_int <- apply(res[["upper"]], 2, mean)
     tbeta <- res[["truth"]]
     
+    indiv_width[iter,] <- colMeans(res[["upper"]] == res[["lower"]])
     indiv_cov[iter,] <- tbeta >= lower_int & tbeta <= upper_int
     overall_cov[iter] <- mean(indiv_cov[iter,])
     
@@ -133,7 +132,7 @@ eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, niter = 100, nboot = 100) 
   
   }
   
-  return(list("overall_cov" = overall_cov, "indiv_cov" = indiv_cov, "truth" = tbeta))
+  return(list("overall_cov" = overall_cov, "indiv_cov" = indiv_cov, "truth" = tbeta, "indiv_width" = indiv_width))
 
 }
 ```
@@ -184,8 +183,6 @@ mean(res$overall_cov)
 ```
 
 # Many Covariates
-
-- Why values of lambda?
 
 ## Not High Dimensional
 
