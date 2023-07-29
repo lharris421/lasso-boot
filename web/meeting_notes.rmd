@@ -5,6 +5,12 @@ output:
     code_folding: hide
 ---
 
+# Next Meeting
+
+- Worked on updating the interval finding function to be more stable but continued running into issues. I really think this stems back to instability in computing the proportionality constant. 
+- I also say issues arrising from skewed posteriors which make finding density from the posterior mode potentially have issues, but these could also stem back to the earlier point made. I think this method would be potentially the most stable option but everything relies heavily on computing that normalizing constant.
+- I need to recover the word where I try and estimate the bounds from the mode. Which I think should just take some uncommenting.
+
 # Running To-Do
 
 - Visualize the posterior in a single dimension for Bayesian bootstraps
@@ -25,6 +31,19 @@ output:
 
 ## Notes
 
+- Work on simple versions first before trying to extend it to more complex cases.
+
+- Look at visualizing the prior / posterior
+- Look at numerical integration techniques
+- Consider integrating from posterior mode (lasso solution)
+x Move denominator into log to see if that would help
+- Look at intervals on a simpler example
+- Look into an amazon bucket (Patrick could host)
+- Look into variational bayes for lasso, or generally if someone has tried to approximate the lasso posterior
+
+
 ## Action Items
+
+- See Notes above. Need to do better next time seperating general discussion notes and what I need to work on going forward.
 
 ## References

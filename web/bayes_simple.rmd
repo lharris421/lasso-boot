@@ -46,9 +46,20 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
     for (j in 1:length(tbeta)) {
       
       r <- ynew - (coefs[1] + xnew[,-j,drop=FALSE] %*% coefs[-1][-j])
+      post_mode <- coefs[-1][j]
       
-      lowers[i,j] <- post_quant(.1, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r) 
-      uppers[i,j] <- post_quant(.9, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r)
+      p <- 0.8
+      bounds <- find_narrowest_interval(p, rate = rate, partial_residuals = r, sigma = sqrt(sigma2), xvar = xnew[,j,drop=FALSE])
+      lowers[i,j] <- bounds[1]
+      uppers[i,j] <- bounds[2]
+      
+      # 
+      # print(paste("Lower bound:", bounds[1], "Upper bound:", bounds[2]))
+      # print("--------")
+      
+      # uppers[i,j] <- post_quant(.9, post_mode, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r)
+      # lowers[i,j] <- post_quant(.1, post_mode, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r) 
+      
       
     }
     
@@ -108,10 +119,10 @@ eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, niter = 100, nboot = 100) 
 ### Five Examples
 
 ```{r}
-for (i in 1:5) {
-  tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100)
-  print(c(mean(tmp$lower), mean(tmp$upper)))
-}
+## set.seed(1234)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 10)
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print(c(median(tmp$lower), median(tmp$upper)))
 ```
 
 
@@ -132,13 +143,13 @@ mean(res$overall_cov)
 ## Beta = 3
 
 ```{r, eval = FALSE}
-beta0 <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 100)
-save(beta0, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_single_simple.rds")
+beta3 <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 10)
+## save(beta3, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_single_simple.rds")
 ```
 
 ```{r}
 load("/Users/loganharris/github/lasso-boot/web/data/beta3_single_simple.rds")
-c(mean(beta0$lower), mean(beta0$upper))
+c(mean(beta3$lower), mean(beta3$upper))
 ```
 
 ```{r, eval = FALSE}
@@ -153,130 +164,130 @@ load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov_simple.rds")
 mean(res$overall_cov)
 ```
 
-# Many Covariates
+<!-- # Many Covariates -->
 
-## Not High Dimensional
+<!-- ## Not High Dimensional -->
 
-### Single Example
+<!-- ### Single Example -->
 
-```{r, eval = FALSE}
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5))
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/many_single_simple.rds")
-```
+<!-- ```{r, eval = FALSE} -->
+<!-- tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5)) -->
+<!-- save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/many_single_simple.rds") -->
+<!-- ``` -->
 
-```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/many_single_simple.rds")
-plot_boot(tmp)
-```
-
-
-### Coverage
-
-```{r, eval = FALSE}
-set.seed(123)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5))
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/many_simple.rds")
-```
-
-```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/many_simple.rds")
-```
-
-#### Overall Coverage (per bootstrap)
-
-```{r}
-mean(res$overall_cov)
-hist(res$overall_cov)
-```
-
-#### Individual Coverage (per covariate)
-
-```{r}
-tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage)
-```
-
-## n = p
-
-Here, I simply increase the number of true zeros. What I was interested in seeing was: 1) does the increase in sparsity effect the coverage of the non-zero coefficients, 2) Does it impact the marginal coverage rate?
-
-### Single Example
-
-```{r, eval = FALSE}
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100)
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds")
-```
-
-```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds")
-plot_boot(tmp)
-```
+<!-- ```{r} -->
+<!-- load("/Users/loganharris/github/lasso-boot/web/data/many_single_simple.rds") -->
+<!-- plot_boot(tmp) -->
+<!-- ``` -->
 
 
-### Coverage
+<!-- ### Coverage -->
 
-```{r, eval = FALSE}
-set.seed(123)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100)
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds")
-```
+<!-- ```{r, eval = FALSE} -->
+<!-- set.seed(123) -->
+<!-- res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5)) -->
+<!-- save(res, file = "/Users/loganharris/github/lasso-boot/web/data/many_simple.rds") -->
+<!-- ``` -->
 
-```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds")
-```
+<!-- ```{r, echo=FALSE} -->
+<!-- load("/Users/loganharris/github/lasso-boot/web/data/many_simple.rds") -->
+<!-- ``` -->
 
-#### Overall Coverage (per bootstrap)
+<!-- #### Overall Coverage (per bootstrap) -->
 
-```{r}
-mean(res$overall_cov)
-hist(res$overall_cov)
-```
+<!-- ```{r} -->
+<!-- mean(res$overall_cov) -->
+<!-- hist(res$overall_cov) -->
+<!-- ``` -->
 
-#### Individual Coverage (per covariate)
+<!-- #### Individual Coverage (per covariate) -->
 
-```{r}
-tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage)
-```
+<!-- ```{r} -->
+<!-- tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth) -->
+<!-- plot(abs(tmp$beta), tmp$coverage) -->
+<!-- ``` -->
 
-## Increating betas, Not High Dimensional
+<!-- ## n = p -->
 
-### Single Example
+<!-- Here, I simply increase the number of true zeros. What I was interested in seeing was: 1) does the increase in sparsity effect the coverage of the non-zero coefficients, 2) Does it impact the marginal coverage rate? -->
 
-```{r, eval = FALSE}
-tmp <- eb_boot(beta = c(0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5))
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/increasing_single_simple.rds")
-```
+<!-- ### Single Example -->
 
-```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/increasing_single_simple.rds")
-plot_boot(tmp)
-```
+<!-- ```{r, eval = FALSE} -->
+<!-- tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100) -->
+<!-- save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds") -->
+<!-- ``` -->
 
-### Coverage
-
-```{r, eval = FALSE}
-set.seed(123)
-res <- eb_boot_sim(beta = c(0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5))
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/increasing_simple.rds")
-```
-
-```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/increasing_simple.rds")
-```
+<!-- ```{r} -->
+<!-- load("/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds") -->
+<!-- plot_boot(tmp) -->
+<!-- ``` -->
 
 
-#### Overall Coverage (per bootstrap)
+<!-- ### Coverage -->
 
-```{r}
-mean(res$overall_cov)
-hist(res$overall_cov)
-```
+<!-- ```{r, eval = FALSE} -->
+<!-- set.seed(123) -->
+<!-- res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100) -->
+<!-- save(res, file = "/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds") -->
+<!-- ``` -->
 
-#### Individual Coverage (per covariate)
+<!-- ```{r, echo=FALSE} -->
+<!-- load("/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds") -->
+<!-- ``` -->
 
-```{r}
-tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage)
-```
+<!-- #### Overall Coverage (per bootstrap) -->
+
+<!-- ```{r} -->
+<!-- mean(res$overall_cov) -->
+<!-- hist(res$overall_cov) -->
+<!-- ``` -->
+
+<!-- #### Individual Coverage (per covariate) -->
+
+<!-- ```{r} -->
+<!-- tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth) -->
+<!-- plot(abs(tmp$beta), tmp$coverage) -->
+<!-- ``` -->
+
+<!-- ## Increating betas, Not High Dimensional -->
+
+<!-- ### Single Example -->
+
+<!-- ```{r, eval = FALSE} -->
+<!-- tmp <- eb_boot(beta = c(0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5)) -->
+<!-- save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/increasing_single_simple.rds") -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- load("/Users/loganharris/github/lasso-boot/web/data/increasing_single_simple.rds") -->
+<!-- plot_boot(tmp) -->
+<!-- ``` -->
+
+<!-- ### Coverage -->
+
+<!-- ```{r, eval = FALSE} -->
+<!-- set.seed(123) -->
+<!-- res <- eb_boot_sim(beta = c(0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5)) -->
+<!-- save(res, file = "/Users/loganharris/github/lasso-boot/web/data/increasing_simple.rds") -->
+<!-- ``` -->
+
+<!-- ```{r, echo=FALSE} -->
+<!-- load("/Users/loganharris/github/lasso-boot/web/data/increasing_simple.rds") -->
+<!-- ``` -->
+
+
+<!-- #### Overall Coverage (per bootstrap) -->
+
+<!-- ```{r} -->
+<!-- mean(res$overall_cov) -->
+<!-- hist(res$overall_cov) -->
+<!-- ``` -->
+
+<!-- #### Individual Coverage (per covariate) -->
+
+<!-- ```{r} -->
+<!-- tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth) -->
+<!-- plot(abs(tmp$beta), tmp$coverage) -->
+<!-- ``` -->
 

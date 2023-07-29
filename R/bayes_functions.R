@@ -24,10 +24,6 @@ ll <- function(beta, partial_residuals, sigma, xvar) {
 
 }
 
-# ll <- function(beta, partial_residuals, sigma, xvar) {
-#   sum(dnorm(partial_residuals - xvar * beta, mean = 0, sd = sigma, log = TRUE))
-# }
-
 density_function <- function(x, rate, partial_residuals, sigma, xvar) {
 
   prior <- log(dlaplace(x, rate = rate))
@@ -36,58 +32,109 @@ density_function <- function(x, rate, partial_residuals, sigma, xvar) {
 
 }
 
-# density_function <- function(x, rate, partial_residuals, sigma, xvar) {
-#   prior <- log(dlaplace(x, rate = rate))
-#   llik <- sapply(x, ll, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar)
-#   return(exp(prior + llik))
+density_function_normalized <- function(x, rate, partial_residuals, sigma, xvar, normalizer) {
+
+  prior <- log(dlaplace(x, rate = rate))
+  llik <- ll(beta = x, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar)
+  return(exp(prior + llik - log(normalizer)))
+
+}
+
+# obj2 <- function(beta, post_mode, p, sigma, rate, xvar, partial_residuals) {
+#
+#
+#   denom <- integrate(
+#     density_function, lower = -Inf, upper = Inf,
+#     rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar
+#   )$value
+#
+#   xvals <- seq(-2, 2, by = .01)
+#   yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom)
+#   plot(xvals, yvals, type = "l")
+#   abline(v = 0, col = "red")
+#
+#   if (p > .5) {
+#     prob <- integrate(
+#       density_function_normalized, lower = post_mode, upper = beta,
+#       rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar,
+#       normalizer = denom
+#     )$value
+#   } else {
+#     prob <- integrate(
+#       density_function_normalized, lower = beta, upper = post_mode,
+#       rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar,
+#       normalizer = denom
+#     )$value
+#   }
+#
+#   sig <- abs((1-2*p))
+#   return((sig/2) - prob)
+#
 # }
 
+#
+# post_quant <- function(p, post_mode, sigma, rate, xvar, partial_residuals) {
+#
+#
+#   ## tic(msg = "Determining Quantile")
+#   print(c(post_mode, sigma, rate))
+#
+#   print(".9")
+#   print(obj2(post_mode, post_mode, .9, sigma, rate, xvar, partial_residuals))
+#   # print(obj2(post_mode+30, post_mode, .9, sigma, rate, xvar, partial_residuals))
+#   # print(".1")
+#   # print(obj2(post_mode, post_mode, .1, sigma, rate, xvar, partial_residuals))
+#   # print(obj2(post_mode-20, post_mode, .1, sigma, rate, xvar, partial_residuals))
+#
+#   if (p > .5) {
+#     res <- uniroot(obj2, c(post_mode, post_mode + 30), post_mode, p, sigma, rate, xvar, partial_residuals)
+#     print(p)
+#     print(paste0("Results: ", res$root))
+#   } else {
+#     res <- uniroot(obj2, c(post_mode-20, post_mode), post_mode, p, sigma, rate, xvar, partial_residuals)
+#     print(p)
+#     print(paste0("Results: ", res$root))
+#   }
+#   ## toc()
+#   return(res$root)
+#
+# }
 
+# Approximate the CDF using numerical integration
+approx_cdf <- function(x, rate, partial_residuals, sigma, xvar, denom) {
+  res <- integrate(density_function_normalized, -10, x, rate, partial_residuals, sigma, xvar, denom, subdivisions = 10000, rel.tol = 1e-12)$value
+  # print(paste0("Quantile: ", x))
+  # print(res)
+  return(res)
+}
 
-obj <- function(beta, p, sigma, rate, xvar, partial_residuals, lower, upper) {
+# Quantile function based on approximated CDF
+approx_quantile <- function(p, rate, partial_residuals, sigma, xvar, denom) {
+  uniroot(function(x) approx_cdf(x, rate, partial_residuals, sigma, xvar, denom) - p, interval = c(-10, 10))$root
+}
+
+# Optimize to find the narrowest interval containing p of the density
+find_narrowest_interval <- function(p, rate, partial_residuals, sigma, xvar) {
 
   denom <- integrate(
-    density_function, lower = lower, upper = upper,
-    rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar,
-    subdivisions = 1000
+    density_function, lower = -10, upper = 10,
+    rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar, subdivisions = 10000, rel.tol = 1e-12
   )$value
 
-  if (p > .5) {
-    prob <- integrate(
-      density_function, lower = lower, upper = beta,
-      rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar,
-      subdivisions = 1000
-    )$value * (1/denom)
-  } else {
-    prob <- integrate(
-      density_function, lower = beta, upper = upper,
-      rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar,
-      subdivisions = 1000
-    )$value * (1/denom)
-    prob <- 1 - prob
-  }
+  # xvals <- seq(-10, 10, by = .01)
+  # yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom)
+  # print(sum(yvals*.01))
+  # plot(xvals, yvals, type = "l")
+  # abline(v = 0, col = "red")
 
-  return(p - prob)
-
+  res <- optim((1-p)/2, function(x) {
+    q1 <- approx_quantile(x, rate, partial_residuals, sigma, xvar, denom)
+    q2 <- approx_quantile(x + p, rate, partial_residuals, sigma, xvar, denom)
+    q2 - q1
+  }, method = "Brent", lower = 0, upper = 1 - p)
+  c(approx_quantile(res$par, rate, partial_residuals, sigma, xvar, denom), approx_quantile(res$par + p, rate, partial_residuals, sigma, xvar, denom))
 }
 
 
-post_quant <- function(p, sigma, rate, xvar, partial_residuals) {
 
-  # Sample the function over the desired range
-  ## tic(msg = "Getting range")
-  beta_range <- seq(from = -10, to = 10, by = 0.01)  # Adjust these values as needed
-  dens <- sapply(beta_range, density_function, rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar)
 
-  # Determine the significant range
-  non_zero_indices <- which(abs(dens) > 0)
-  beta_min <- beta_range[min(non_zero_indices)]
-  beta_max <- beta_range[max(non_zero_indices)]
-  ## toc()
-
-  ## tic(msg = "Determining Quantile")
-  res <- uniroot(obj, c(beta_min, beta_max), p, sigma, rate, xvar, partial_residuals, beta_min, beta_max)
-  ## toc()
-  return(res$root)
-
-}
