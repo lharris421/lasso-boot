@@ -9,26 +9,26 @@ output:
 
 # Running To-Do
 
-- [] Visualize the posterior in a single dimension for Bayesian bootstraps
 - [] Create mre for "Error: Supplied lambda value(s) are outside the range of the model fit."
+- [x] Visualize the posterior in a single dimension for Bayesian bootstraps
 
-# Next Meeting
+# August 16th, 2023
 
-- Make sure to clean up while still keeping example of what is happening in simple cases
-
-- Worked on updating the interval finding function to be more stable but continued running into issues. I really think this stems back to instability in computing the proportionality constant. 
-- I looked down the path of "Determining Bayes Normalizing Constant" but aside from instability in the estimation of this quantity, I think there is just an issue in general with it being so small. I'm not sure any method I develop that requires a similar approach will be fruitful.
+- Worked on updating the interval finding function to be more stable but continued running into issues. I really think this stems back to instability in computing the proportionality constant. I have made some progress and currently believe that as long as I can find a constant such that I am then able to compute a non-zero / non-infinite value for the density at the posterior mode that this method should work.
+- I looked down the path of "Determining Bayes Normalizing Constant" but aside from instability in the estimation of this quantity, I think there is just an issue in general with it being so small. I'm not sure any method I develop that requires a similar approach will be fruitful. Which is why I believe my approach alluded to in the first point is necessary first.
 - I also saw issues arising from skewed posteriors which make finding density from the posterior mode potentially have issues, but these could also stem back to the earlier point made. I think this method would be potentially the most stable option but everything relies heavily on computing that normalizing constant.
-  - I also worked on a method to find the HPD, but again, it is little use with methods with the normalizing constant issue
+  - I also worked on a method to find the HPD, but again, it is little use with methods with the normalizing constant issue. However, given recent dicoveries I want to revisit this in the future.
 - I read "Analytic solution and stationary phase approximation for the Bayesian lasso and elastic net." This honestly fits perfectly into what we would need except for the fact that it does not work for lasso when the design matrix is rank deficient. This also concerns me because the paper is not too old (late 2018) suggesting to me that other analytic solutions (i.e. variational bayes) may not exist for the lasso.
 - Potential papers for variational bayes:
   - Variational Full Bayes Lasso: Knots Selection in Regression Splines (https://arxiv.org/pdf/2102.13548v1.pdf)
 
-- Hurdle currently left is finding a constant such that the posterior mode has a density > 0. If I can get this, I can get the rest I believe.
+## To Do
 
+- [] Look into bridge sampling?
+  - See chat gpt chat
 
-- I need to recover the work where I try and estimate the bounds from the mode. Which I think should just take some uncommenting. Then, I should test this on the simpler version but then table this work and try and do some research.
-- Should look into bridge sampling and variational bayes inference
+- Need to test current on simpler version
+- Should look into bridge sampling and variational (again) bayes inference
 
 # July 26th, 2023
 
@@ -44,12 +44,13 @@ output:
 
 - Work on simple versions first before trying to extend it to more complex cases.
 
-- [] Look at visualizing the prior / posterior (Do with original interval finding method)
+- [x] Look at visualizing the prior / posterior (Do with original interval finding method)
 - [x] Consider integrating from posterior mode (lasso solution): not great when skewed
 - [x] Move denominator into log to see if that would help
 - [x] Look at intervals on a simpler example
 - [] Look into variational bayes for lasso, or generally if someone has tried to approximate the lasso posterior (numerically or annalytically)
-- [] Clean up three methods of interval finding
+- [x] Clean up three methods of interval finding
+  - Done for now, will stick with simpler of the three and in the future look back at the hpd method
 
 ## Action Items
 

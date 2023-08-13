@@ -48,7 +48,7 @@ library(ncvreg)
 library(statmod)
 library(ggplot2)
 
-eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
+eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = FALSE) {
   
   ## set.seed(12345)
   dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n)
@@ -91,49 +91,6 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
   
   return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta))
   
-}
-
-plot_boot <- function(eb_boot) {
-  
-  lowers <- apply(eb_boot[["lower"]], 2, mean)
-  uppers <- apply(eb_boot[["upper"]], 2, mean)
-  plot_res <- data.frame(truth = eb_boot[["truth"]], grp = names(eb_boot[["truth"]]), lower = lowers, upper = uppers)
-  
-  plot_res %>%
-    ggplot() +
-    geom_point(aes(x = truth, y = grp)) +
-    geom_errorbar(aes(xmin = lower, xmax = upper, y = grp)) +
-    theme_bw()
-
-}
-
-eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, niter = 100, nboot = 100) {
-
-  overall_cov <- numeric(nboot)
-  indiv_cov <- matrix(nrow = nboot, ncol = p)
-  indiv_width <- matrix(nrow = nboot, ncol = p)
-  
-  pb <- txtProgressBar(1, nboot, style=3)
-  
-  ## p, beta, n
-  for (iter in 1:nboot) {
-  
-    res <- eb_boot(beta = beta, p = p, b = b, n = n, niter = niter)
-    
-    lower_int <- apply(res[["lower"]], 2, mean)
-    upper_int <- apply(res[["upper"]], 2, mean)
-    tbeta <- res[["truth"]]
-    
-    indiv_width[iter,] <- colMeans(res[["upper"]] == res[["lower"]])
-    indiv_cov[iter,] <- tbeta >= lower_int & tbeta <= upper_int
-    overall_cov[iter] <- mean(indiv_cov[iter,])
-    
-    setTxtProgressBar(pb, iter)
-  
-  }
-  
-  return(list("overall_cov" = overall_cov, "indiv_cov" = indiv_cov, "truth" = tbeta, "indiv_width" = indiv_width))
-
 }
 ```
 
