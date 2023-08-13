@@ -1,0 +1,217 @@
+---
+title: "EB CI Simple Example"
+author: "Logan Harris"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+This serves as a proof of concept that the method I am using for finding a confidence interval is indeed working... but that the main issue we run into is dealing with the numerical instability of the posterior.
+
+I can't remember exactly how Patrick did this (stochastic or not) but I think this is sufficient for now especially seeing even this breaks down.
+
+Finish this later by adding a range of example using different rng and a spectrum of sample sizes. It would also be nice here to have plot outputs of the prior and posteriors as examples. Or this may be better suited for the bayes simple so we can see it in a place where we are actually fitting the lasso.
+
+
+```{r}
+dlaplace <- function(x, rate = 1) {
+  dexp(abs(x), rate) / 2
+}
+
+ll <- function(beta, mean, sigma, n = 30) {
+
+  # Compute the log-likelihood(s)
+  sapply(beta, function(x) sum(dnorm(mean - x, mean = 0, sd = sigma, log = TRUE))*n)
+
+}
+
+density_function <- function(x, rate, mean, sigma, n = 30) {
+
+  prior <- log(dlaplace(x, rate = rate))
+  llik <- ll(beta = x, mean = mean, sigma = sigma, n = n)
+  return(exp(prior + llik))
+
+}
+
+density_function_normalized <- function(x, rate, mean, sigma, n = 30, normalizer) {
+
+  prior <- log(dlaplace(x, rate = rate))
+  llik <- ll(beta = x, mean = mean, sigma = sigma, n = n)
+  return(exp(prior + llik - log(normalizer)))
+
+}
+
+obj_simple <- function(beta, post_mode, p, rate, mean, sigma, n = 30) {
+
+  rng <- Inf
+  denom <- integrate(
+    density_function, lower = post_mode-rng, upper = post_mode+rng, rate, mean, sigma, n
+  )$value
+
+  if (p > .5) {
+    prob <- integrate(
+      density_function_normalized, lower = post_mode, upper = beta,
+      rate = rate, mean = mean, sigma = sigma, n = n,
+      normalizer = denom
+    )$value
+  } else {
+    prob <- integrate(
+      density_function_normalized, lower = beta, upper = post_mode,
+      rate = rate, mean = mean, sigma = sigma, n = n,
+      normalizer = denom
+    )$value
+  }
+
+  sig <- abs((1-2*p))
+  return((sig/2) - prob)
+
+}
+
+
+post_quant <- function(conf, mean = 0, sigma = 1, rate = 1, n = 30) {
+  
+  ## Posterior plot
+  xvals <- seq(-10, 10, by = .01)
+  yvals <- density_function(xvals, rate, mean, sigma, n)
+  post_mode <- xvals[which.max(yvals)]
+  
+  rng <- Inf
+  denom <- integrate(
+    density_function, lower = post_mode-rng, upper = post_mode+rng, rate, mean, sigma, n
+  )$value
+  print(denom)
+  
+  yvals <- density_function_normalized(xvals, rate, mean, sigma, n, denom)
+  post_mode <- xvals[which.max(yvals)]
+  
+  ## Check
+  print(integrate(
+      density_function_normalized, lower = -rng, upper = rng,
+      rate = rate, mean = mean, sigma = sigma, n = n,
+      normalizer = denom
+    )$value)
+  
+  upper <- uniroot(obj_simple, c(post_mode, post_mode + 10), post_mode, conf + (1 - conf)/2, rate, mean, sigma, n)
+  lower <- uniroot(obj_simple, c(post_mode - 10, post_mode), post_mode, (1 - conf)/2, rate, mean, sigma, n)
+  ci <- c(lower$root, upper$root)
+  
+  
+  plot(xvals, yvals, type = "l")
+  abline(v = ci, col = "red")
+  
+  return(ci)
+
+}
+```
+
+
+```{r}
+post_quant(.8, mean = 2, n = 10)
+post_quant(.8, mean = 2, n = 30)
+post_quant(.8, mean = 2, n = 100)
+post_quant(.8, mean = 2, n = 300)
+post_quant(.8, mean = 2, n = 500)
+post_quant(.8, mean = 2, n = 700)
+```
+
+However, it does not break down if the true distribution is centered at zero:
+
+```{r}
+post_quant(.8, mean = 0, n = 300)
+```
+
+
+## Attempt 2 (Exactly the same)
+
+- Here, I attempted to move things around so more of the computation was done on the log scale, but evidently these pieces didn't lead to any actual difference.
+
+```{r}
+density_function <- function(x, rate, mean, sigma, n = 30) {
+    prior <- log(dlaplace(x, rate = rate))
+    llik <- ll(beta = x, mean = mean, sigma = sigma, n = n)
+    return(prior + llik)
+}
+
+density_function_normalized <- function(x, rate, mean, sigma, n = 30, normalizer) {
+    prior <- log(dlaplace(x, rate = rate))
+    llik <- ll(beta = x, mean = mean, sigma = sigma, n = n)
+    return(exp(prior + llik - normalizer))  # Assuming `normalizer` is also in log space
+}
+
+
+integrate_exp <- function(lower, upper, rate, mean, sigma, n) {
+    integrand <- function(x, rate, mean, sigma, n) exp(density_function(x, rate=rate, mean=mean, sigma=sigma, n=n))
+    return(integrate(integrand, lower, upper, rate, mean, sigma, n))
+}
+
+obj_simple <- function(beta, post_mode, p, rate, mean, sigma, n = 30) {
+
+  rng <- Inf
+  denom <- integrate_exp(
+    lower = post_mode-rng, upper = post_mode+rng, rate=rate, mean=mean, sigma=sigma, n=n
+  )$value
+
+  if (p > .5) {
+    prob <- integrate(
+      density_function_normalized, lower = post_mode, upper = beta,
+      rate = rate, mean = mean, sigma = sigma, n = n,
+      normalizer = log(denom)
+    )$value
+  } else {
+    prob <- integrate(
+      density_function_normalized, lower = beta, upper = post_mode,
+      rate = rate, mean = mean, sigma = sigma, n = n,
+      normalizer = log(denom)
+    )$value
+  }
+
+  sig <- abs((1-2*p))
+  return((sig/2) - prob)
+
+}
+
+
+post_quant <- function(conf, mean = 0, sigma = 1, rate = 1, n = 30) {
+  
+  
+  xvals <- seq(-3, 3, by = .1)
+  yvals <- density_function(xvals, rate, mean, sigma, n)
+  post_mode <- xvals[which.max(yvals)]
+  
+  rng <- Inf
+  denom <- integrate_exp(
+    lower = post_mode-rng, upper = post_mode+rng, rate=rate, mean=mean, sigma=sigma, n=n
+  )$value
+  print(denom)
+  
+  yvals <- density_function_normalized(xvals, rate, mean, sigma, n, log(denom))
+  post_mode <- xvals[which.max(yvals)]
+  
+  ## Check
+  print(integrate(
+      density_function_normalized, lower = -rng, upper = rng,
+      rate = rate, mean = mean, sigma = sigma, n = n,
+      normalizer = log(denom)
+    )$value)
+  
+  upper <- uniroot(obj_simple, c(post_mode, post_mode + 10), post_mode, conf + (1 - conf)/2, rate, mean, sigma, n)
+  lower <- uniroot(obj_simple, c(post_mode - 10, post_mode), post_mode, (1 - conf)/2, rate, mean, sigma, n)
+  ci <- c(lower$root, upper$root)
+  
+  
+  plot(xvals, yvals, type = "l")
+  abline(v = ci, col = "red")
+  
+  return(ci)
+
+}
+
+```
+
+```{r}
+post_quant(.8, mean = 0, n = 300)
+```

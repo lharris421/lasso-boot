@@ -15,7 +15,7 @@ library(tictoc)
 
 
 ```{r}
-eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
+eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
   
   ## set.seed(12345)
   ## tic(msg = "Set up")
@@ -48,17 +48,15 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
       r <- ynew - (coefs[1] + xnew[,-j,drop=FALSE] %*% coefs[-1][-j])
       post_mode <- coefs[-1][j]
       
-      p <- 0.8
-      bounds <- find_narrowest_interval(p, rate = rate, partial_residuals = r, sigma = sqrt(sigma2), xvar = xnew[,j,drop=FALSE])
-      lowers[i,j] <- bounds[1]
-      uppers[i,j] <- bounds[2]
+      # HPD attempt
+      # p <- 0.8
+      # bounds <- find_narrowest_interval(p, rate = rate, partial_residuals = r, sigma = sqrt(sigma2), xvar = xnew[,j,drop=FALSE])
+      # lowers[i,j] <- bounds[1]
+      # uppers[i,j] <- bounds[2]
       
-      # 
-      # print(paste("Lower bound:", bounds[1], "Upper bound:", bounds[2]))
-      # print("--------")
-      
-      # uppers[i,j] <- post_quant(.9, post_mode, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r)
-      # lowers[i,j] <- post_quant(.1, post_mode, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r) 
+      ## Need to compress this into a single call in future
+      uppers[i,j] <- post_quant(.9, post_mode, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r, plot = plot)
+      lowers[i,j] <- post_quant(.1, post_mode, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r, plot = FALSE)
       
       
     }
@@ -116,11 +114,11 @@ eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, niter = 100, nboot = 100) 
 
 ## Beta = 0
 
-### Five Examples
+### One Example
 
 ```{r}
 ## set.seed(1234)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 10)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 500, niter = 10)
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print(c(median(tmp$lower), median(tmp$upper)))
 ```
@@ -130,7 +128,7 @@ print(c(median(tmp$lower), median(tmp$upper)))
 ### Coverage
 
 ```{r, eval=FALSE}
-set.seed(1234)
+## set.seed(1234)
 res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, niter = 100, nboot = 100); save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta0_cov_simple.rds")
 mean(res$overall_cov)
 ```
@@ -143,13 +141,14 @@ mean(res$overall_cov)
 ## Beta = 3
 
 ```{r, eval = FALSE}
-beta3 <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 10)
+beta3 <- eb_boot(beta = 3, p = 1, b = 0, n = 3000, niter = 100)
 ## save(beta3, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_single_simple.rds")
 ```
 
 ```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/beta3_single_simple.rds")
+## load("/Users/loganharris/github/lasso-boot/web/data/beta3_single_simple.rds")
 c(mean(beta3$lower), mean(beta3$upper))
+c(median(beta3$lower), median(beta3$upper))
 ```
 
 ```{r, eval = FALSE}

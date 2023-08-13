@@ -5,19 +5,30 @@ output:
     code_folding: hide
 ---
 
-# Next Meeting
 
-- Worked on updating the interval finding function to be more stable but continued running into issues. I really think this stems back to instability in computing the proportionality constant. 
-- I also say issues arrising from skewed posteriors which make finding density from the posterior mode potentially have issues, but these could also stem back to the earlier point made. I think this method would be potentially the most stable option but everything relies heavily on computing that normalizing constant.
-- I need to recover the word where I try and estimate the bounds from the mode. Which I think should just take some uncommenting.
 
 # Running To-Do
 
-- Visualize the posterior in a single dimension for Bayesian bootstraps
-- Double check what the intervals look like (in terms of average width, # times width = 0 still)
-- Create mre for "Error: Supplied lambda value(s) are outside the range of the model fit."
+- [] Visualize the posterior in a single dimension for Bayesian bootstraps
+- [] Create mre for "Error: Supplied lambda value(s) are outside the range of the model fit."
 
-# Reading List
+# Next Meeting
+
+- Make sure to clean up while still keeping example of what is happening in simple cases
+
+- Worked on updating the interval finding function to be more stable but continued running into issues. I really think this stems back to instability in computing the proportionality constant. 
+- I looked down the path of "Determining Bayes Normalizing Constant" but aside from instability in the estimation of this quantity, I think there is just an issue in general with it being so small. I'm not sure any method I develop that requires a similar approach will be fruitful.
+- I also saw issues arising from skewed posteriors which make finding density from the posterior mode potentially have issues, but these could also stem back to the earlier point made. I think this method would be potentially the most stable option but everything relies heavily on computing that normalizing constant.
+  - I also worked on a method to find the HPD, but again, it is little use with methods with the normalizing constant issue
+- I read "Analytic solution and stationary phase approximation for the Bayesian lasso and elastic net." This honestly fits perfectly into what we would need except for the fact that it does not work for lasso when the design matrix is rank deficient. This also concerns me because the paper is not too old (late 2018) suggesting to me that other analytic solutions (i.e. variational bayes) may not exist for the lasso.
+- Potential papers for variational bayes:
+  - Variational Full Bayes Lasso: Knots Selection in Regression Splines (https://arxiv.org/pdf/2102.13548v1.pdf)
+
+- Hurdle currently left is finding a constant such that the posterior mode has a density > 0. If I can get this, I can get the rest I believe.
+
+
+- I need to recover the work where I try and estimate the bounds from the mode. Which I think should just take some uncommenting. Then, I should test this on the simpler version but then table this work and try and do some research.
+- Should look into bridge sampling and variational bayes inference
 
 # July 26th, 2023
 
@@ -29,21 +40,18 @@ output:
   - The paper suggests a method in which under specific conditions the Lasso can be used as a computational short cut for model selection / estimation using a specific hierarchical prior for a linear model. With this, the authors also propose a way to select lambda and estimate $\sigma^2$ (and hence obtaining the final model as the lasso solution).
 - Would we like to set up a drop box to store data objects?
 
-## Notes
+## To Do
 
 - Work on simple versions first before trying to extend it to more complex cases.
 
-- Look at visualizing the prior / posterior
-- Look at numerical integration techniques
-- Consider integrating from posterior mode (lasso solution)
-x Move denominator into log to see if that would help
-- Look at intervals on a simpler example
-- Look into an amazon bucket (Patrick could host)
-- Look into variational bayes for lasso, or generally if someone has tried to approximate the lasso posterior
-
+- [] Look at visualizing the prior / posterior (Do with original interval finding method)
+- [x] Consider integrating from posterior mode (lasso solution): not great when skewed
+- [x] Move denominator into log to see if that would help
+- [x] Look at intervals on a simpler example
+- [] Look into variational bayes for lasso, or generally if someone has tried to approximate the lasso posterior (numerically or annalytically)
+- [] Clean up three methods of interval finding
 
 ## Action Items
 
-- See Notes above. Need to do better next time seperating general discussion notes and what I need to work on going forward.
+- See Notes above. Need to do better next time separating general discussion notes and what I need to work on going forward.
 
-## References
