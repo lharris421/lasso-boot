@@ -1,5 +1,6 @@
 ---
 title: "Simple Bayes"
+runtime: shiny
 output:
   html_document:
     code_folding: hide
@@ -11,6 +12,7 @@ output:
 I'm sorry, right now different versions of these functions live in different notebooks. If they look like they are going to have a longer lifespan, I will work on integrating them into a single function. 
 
 ```{r}
+source("./R/bayes_functions.R")
 eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
   
   dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n)
@@ -21,7 +23,8 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
   
   lowers <- matrix(nrow = niter, ncol = length(tbeta))
   uppers <- matrix(nrow = niter, ncol = length(tbeta))
-
+  if (plot) {plot_data <- list()}
+  
   for (i in 1:niter) {
 
     idx_new <- sample(1:length(y), replace = TRUE)
@@ -37,25 +40,64 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
     ## Beta specific
     for (j in 1:length(tbeta)) {
       
-      r <- ynew - (coefs[1] + xnew[,-j,drop=FALSE] %*% coefs[-1][-j])
+      partial_residuals <- ynew - (coefs[1] + xnew[,-j,drop=FALSE] %*% coefs[-1][-j])
       post_mode <- coefs[-1][j]
-      
-      # HPD attempt
-      # p <- 0.8
-      # bounds <- find_narrowest_interval(p, rate = rate, partial_residuals = r, sigma = sqrt(sigma2), xvar = xnew[,j,drop=FALSE])
-      # lowers[i,j] <- bounds[1]
-      # uppers[i,j] <- bounds[2]
+      sigma <- sqrt(sigma2)
+      xvar <- xnew[,j,drop=FALSE]
       
       ## Need to compress this into a single call in future
-      uppers[i,j] <- post_quant(.9, post_mode, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r, plot = plot)
-      lowers[i,j] <- post_quant(.1, post_mode, sqrt(sigma2), rate, xnew[,j,drop=FALSE], r, plot = FALSE)
+      uppers[i,j] <- post_quant(.9, post_mode, sigma, rate, xvar, partial_residuals)
+      lowers[i,j] <- post_quant(.1, post_mode, sigma, rate, xvar, partial_residuals)
       
+      ## Produce a plot of the posterior, posterior mode, prior, and likelihood
+      if (plot) {
+        
+        ## One of the main hurdles is making sure this quantity is finite
+        mltplyr <- 1 / density_function(post_mode, rate, partial_residuals, sigma, xvar, multiplier = 1)
+      
+        ## Determine the normalizing constant
+        denom <- integrate(
+          density_function, lower = -Inf, upper = Inf,
+          rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar, multiplier = mltplyr
+        )$value
+      
+        ## Find the largest density, used for determining bounds of integration / plotting
+        ymode <- density_function_normalized(post_mode, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
+      
+        ## Determine bounds
+        step <- .01
+        curr <- step
+        while (TRUE) {
+          xvals <- post_mode + c(-1, 1)*curr
+          yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
+      
+          if (all(yvals < (ymode / 100))) {break} else {curr <- curr + step}
+        }
+      
+        ## Redetermine normalizing constant based on new bounds
+        denom <- integrate(
+          density_function, lower = post_mode - curr, upper = post_mode + curr,
+          rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar, multiplier = mltplyr
+        )$value
+        
+        xvals <- seq(post_mode - curr, post_mode + curr, by = .01)
+        yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
+        priory <- dlaplace(xvals, rate = rate) * (ymode / dlaplace(0, rate = rate))
+        liky <- exp(ll(beta = xvals, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar))
+        liky <- (liky / max(liky)) * ymode
+        plot_data[[i]] <- list(data.frame(x = xvals, posterior = yvals, prior = priory, lik = liky), post_mode = post_mode, lower = lowers[i,j], upper = uppers[i,j], lambda = lam)
+      }
+    
       
     }
     
   }
   
-  return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta))
+  if (plot) {
+    return(list("res" = list("lower" = lowers, "upper" = uppers, "truth" = tbeta), "plots" = plot_data))
+  } else {
+    return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta)) 
+  }
   
 }
 ```
@@ -65,14 +107,72 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
 
 ## Beta = 0
 
-### One Example
+### Ten Examples {.tabset}
 
 ```{r}
 tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 10)
-print(c(mean(tmp$lower), mean(tmp$upper)))
-print(c(median(tmp$lower), median(tmp$upper)))
 ```
 
+```{r}
+library(ggplot2)
+library(plotly)
+
+
+create_plots <- function(tmp) {
+  
+  plot_data <- tmp$plots
+
+  # Initialize a list to store the plots
+  plotly_plots <- list()
+
+  # Iterate through the plot_data list
+  for (i in seq_along(plot_data)) {
+    # Extract the data for this plot
+    data <- plot_data[[i]][[1]]
+  
+    # Create a data frame for ggplot
+    plot_df <- data.frame(
+      x = data$x,
+      posterior = data$posterior,
+      prior = data$prior,
+      lik = data$lik
+    )
+  
+    # Create the ggplot object
+    p <- ggplot(plot_df, aes(x = x)) +
+      geom_line(aes(y = posterior), color = "purple") +
+      geom_line(aes(y = prior), color = "red") +
+      geom_line(aes(y = lik), color = "blue") +
+      geom_vline(xintercept = plot_data[[i]]$post_mode, color = "purple") +
+      geom_vline(xintercept = plot_data[[i]]$lower, color = "purple", linetype="dashed") +
+      geom_vline(xintercept = plot_data[[i]]$upper, color = "purple", linetype="dashed") +
+      labs(title = paste("Lambda: ", round(plot_data[[i]]$lambda, 4)), x = "Beta", y = "Posterior Density") 
+  
+    # Convert to ggplotly and store in the list
+    plotly_plots[[i]] <- ggplotly(p)
+    
+  }
+  
+  return(plotly_plots)
+  
+}
+
+
+plotly_plots <- create_plots(tmp)
+plotly_plots[[1]]
+plotly_plots[[2]]
+plotly_plots[[3]]
+```
+
+
+Corresponding Intervals:
+
+```{r}
+print("Mean: ")
+print(c(mean(tmp$res$lower), mean(tmp$res$upper)))
+print("Median: ")
+print(c(median(tmp$res$lower), median(tmp$res$upper)))
+```
 
 
 ### Coverage
@@ -91,13 +191,30 @@ mean(res$overall_cov)
 
 ## Beta = 3
 
-```{r, eval = FALSE}
-beta3 <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 10)
+### Ten Examples
 
-c(mean(beta3$lower), mean(beta3$upper))
-c(median(beta3$lower), median(beta3$upper))
+```{r}
+beta3 <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 10)
 ```
 
+```{r}
+plotly_plots <- create_plots(beta3)
+plotly_plots[[1]]
+plotly_plots[[2]]
+plotly_plots[[3]]
+```
+
+
+Corresponding intervals:
+
+```{r}
+print("Mean: ")
+c(mean(beta3$res$lower), mean(beta3$res$upper))
+print("Median: ")
+c(median(beta3$res$lower), median(beta3$res$upper))
+```
+
+### Coverage 
 
 ```{r, eval = FALSE}
 set.seed(1234)
@@ -114,7 +231,7 @@ mean(res$overall_cov)
 
 # Many Covariates
 
-## Not High Dimensional
+## p = 60, n = 100
 
 ### Single Example
 
@@ -145,12 +262,12 @@ load("/Users/loganharris/github/lasso-boot/web/data/many_simple.rds")
 
 ```{r}
 mean(res$overall_cov)
-hist(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
 ```
 
 #### Individual Coverage (per covariate)
 
 ```{r}
 tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 ```

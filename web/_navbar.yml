@@ -1,14 +1,10 @@
 title: "Dissertation Work"
 left:
-  - text: "Bootstrapping: ncvreg"
-    href: bootstrapping.html
-  - text: "Coverage"
-    href: coverage.html
   - text: "Emperical Bayes Bootstrap Intervals"
     href: bayes.html
   - text: "Simple Emperical Bayes Bootstrap Intervals"
     href: bayes_simple.html
-  - text: "Distance"
-    href: distance.html
+  - text: "Simple Example"
+    href: simple_example.html
   - text: "Meeting Notes"
     href: meeting_notes.html

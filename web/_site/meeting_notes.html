@@ -1664,19 +1664,13 @@ border-radius: 0px;
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
-  <a href="bootstrapping.html">Bootstrapping: ncvreg</a>
-</li>
-<li>
-  <a href="coverage.html">Coverage</a>
-</li>
-<li>
   <a href="bayes.html">Emperical Bayes Bootstrap Intervals</a>
 </li>
 <li>
   <a href="bayes_simple.html">Simple Emperical Bayes Bootstrap Intervals</a>
 </li>
 <li>
-  <a href="distance.html">Distance</a>
+  <a href="simple_example.html">Simple Example</a>
 </li>
 <li>
   <a href="meeting_notes.html">Meeting Notes</a>
@@ -1708,21 +1702,102 @@ border-radius: 0px;
 
 <div id="running-to-do" class="section level1">
 <h1>Running To-Do</h1>
+<p>I need to add dates to this to do list, and maybe format it so it is
+cleaner… maybe a data table?</p>
 <ul>
-<li>Visualize the posterior in a single dimension for Bayesian
-bootstraps</li>
-<li>Double check what the intervals look like (in terms of average
-width, # times width = 0 still)</li>
-<li>Create mre for “Error: Supplied lambda value(s) are outside the
-range of the model fit.”</li>
+<li><input type="checkbox"></input>Find a way to cleanly present the plots,
+maybe make ggplotly instead?</li>
+<li><input type="checkbox"></input>Look into variational bayes (again) for
+lasso, or generally if someone has tried to approximate the lasso
+posterior (numerically or annalytically)</li>
+<li><input type="checkbox"></input>Create mre for “Error: Supplied lambda
+value(s) are outside the range of the model fit.”</li>
+<li><input type="checkbox" checked></input>Look into bridge sampling
+<ul>
+<li>Seems more like a method to compute the marginal likelihood which
+doesn’t seem directly relavent for the current context since we really
+need to get directly at the posterior</li>
+</ul></li>
+<li><input type="checkbox" checked></input>Work on simple versions first
+before trying to extend it to more complex cases.
+<ul class="task-list">
+<li><input type="checkbox" checked></input>Need to test current on simpler
+version</li>
+</ul></li>
+<li><input type="checkbox" checked></input>Look at visualizing the prior /
+posterior (Do with original interval finding method)</li>
+<li><input type="checkbox" checked></input>Consider integrating from
+posterior mode (lasso solution)</li>
+<li>This turned out to be not great when skewed</li>
+<li><input type="checkbox" checked></input>Move denominator into log to see
+if that would help
+<ul>
+<li>Didn’t have an noticeable improvement</li>
+</ul></li>
+<li><input type="checkbox" checked></input>Clean up three methods of
+interval finding
+<ul>
+<li>Done for now, will stick with simpler of the three and in the future
+look back at the hpd method</li>
+</ul></li>
+<li><input type="checkbox" checked></input>Create “non-normalized” versions
+of plots
+<ul>
+<li>Doesn’t seem viable as this causes plots to essentially be
+meaningless</li>
+</ul></li>
 </ul>
 </div>
-<div id="reading-list" class="section level1">
-<h1>Reading List</h1>
+<div id="august-16th-2023" class="section level1">
+<h1>August 16th, 2023</h1>
+<div id="to-discuss" class="section level2">
+<h2>To Discuss</h2>
+<ul>
+<li>Worked on updating the interval finding function to be more stable
+but continued running into issues. I really think this stems back to
+instability in computing the proportionality constant. I have made some
+progress and currently believe that as long as I can find a constant
+such that I am then able to compute a non-zero / non-infinite value for
+the density at the posterior mode that this method should work.</li>
+<li>I looked down the path of “Determining Bayes Normalizing Constant”
+but aside from instability in the estimation of this quantity, I think
+there is just an issue in general with it being so small. I’m not sure
+any method I develop that requires a similar approach will be fruitful.
+Which is why I believe my approach alluded to in the first point is
+necessary first.</li>
+<li>I also saw issues arising from skewed posteriors which make finding
+density from the posterior mode potentially have issues, but these could
+also stem back to the earlier point made. I think this method would be
+potentially the most stable option but everything relies heavily on
+computing that normalizing constant.
+<ul>
+<li>I also worked on a method to find the HPD, but again, it is little
+use with methods with the normalizing constant issue. However, given
+recent discoveries I want to revisit this in the future.</li>
+</ul></li>
+<li>I read “Analytic solution and stationary phase approximation for the
+Bayesian lasso and elastic net.” This honestly fits perfectly into what
+we would need except for the fact that it does not work for lasso when
+the design matrix is rank deficient. This also concerns me because the
+paper is not too old (late 2018) suggesting to me that other analytic
+solutions (i.e. variational Bayes) may not exist for the lasso.</li>
+<li>Potential papers for variational Bayes:
+<ul>
+<li>Variational Full Bayes Lasso: Knots Selection in Regression Splines
+(<a href="https://arxiv.org/pdf/2102.13548v1.pdf" class="uri">https://arxiv.org/pdf/2102.13548v1.pdf</a>)</li>
+</ul></li>
+</ul>
+</div>
+<div id="notes" class="section level2">
+<h2>Notes</h2>
+</div>
+<div id="action-items" class="section level2">
+<h2>Action Items</h2>
+</div>
 </div>
 <div id="july-26th-2023" class="section level1">
 <h1>July 26th, 2023</h1>
-<div id="to-discuss" class="section level2">
+<div id="to-discuss-1" class="section level2">
 <h2>To Discuss</h2>
 <ul>
 <li>Initial results from “Simple Empirical Bayes Bootstrapped Confidence
@@ -1743,14 +1818,18 @@ model as the lasso solution).</li>
 <li>Would we like to set up a drop box to store data objects?</li>
 </ul>
 </div>
-<div id="notes" class="section level2">
+<div id="notes-1" class="section level2">
 <h2>Notes</h2>
+<ul>
+<li>Need to do a better job at taking notes during meeting</li>
+</ul>
 </div>
-<div id="action-items" class="section level2">
+<div id="action-items-1" class="section level2">
 <h2>Action Items</h2>
-</div>
-<div id="references" class="section level2">
-<h2>References</h2>
+<ul>
+<li>See to do above. Need to do better next time separating general
+discussion notes and what I need to work on going forward.</li>
+</ul>
 </div>
 </div>
 

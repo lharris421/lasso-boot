@@ -73,7 +73,7 @@ obj <- function(beta, p, sigma, rate, xvar, partial_residuals, bounds, multiplie
 
 }
 
-post_quant <- function(p, post_mode, sigma, rate, xvar, partial_residuals, plot = FALSE) {
+post_quant <- function(p, post_mode, sigma, rate, xvar, partial_residuals) {
 
   ## One of the main hurdles is making sure this quantity is finite
   mltplyr <- 1 / density_function(post_mode, rate, partial_residuals, sigma, xvar, multiplier = 1)
@@ -103,28 +103,8 @@ post_quant <- function(p, post_mode, sigma, rate, xvar, partial_residuals, plot 
     rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar, multiplier = mltplyr
   )$value
 
-
-  ## Produce a plot of the posterior, posterior mode, prior, and likelihood
-  if (plot) {
-    xvals <- seq(post_mode - curr, post_mode + curr, by = .01)
-    yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
-    priory <- dlaplace(xvals, rate = rate) * (ymode / dlaplace(0, rate = rate))
-    liky <- exp(ll(beta = xvals, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar))
-    liky <- (liky / max(liky)) * ymode
-    plot(xvals, yvals, type = "l")
-    lines(xvals, priory, col = "blue", lty = 2)
-    lines(xvals, liky, col = "blue", lty = 2)
-    abline(v = post_mode, col = "red")
-  }
-
   ## Determine the bounds
-  if (p > .5) {
-    res <- uniroot(obj, c(post_mode - curr, post_mode + curr), p, sigma, rate, xvar, partial_residuals, c(post_mode - curr, post_mode + curr))
-  } else {
-    res <- uniroot(obj, c(post_mode - curr, post_mode + curr), p, sigma, rate, xvar, partial_residuals, c(post_mode - curr, post_mode + curr))
-  }
-
-
+  res <- uniroot(obj, c(post_mode - curr, post_mode + curr), p, sigma, rate, xvar, partial_residuals, c(post_mode - curr, post_mode + curr))
   return(res$root)
 
 }
@@ -139,7 +119,8 @@ plot_boot <- function(eb_boot) {
     ggplot() +
     geom_point(aes(x = truth, y = grp)) +
     geom_errorbar(aes(xmin = lower, xmax = upper, y = grp)) +
-    theme_bw()
+    theme_bw() +
+    labs(y = "Variable", x = "Estimate")
 
 }
 

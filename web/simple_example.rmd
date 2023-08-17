@@ -18,70 +18,44 @@ Editorial note: Finish this later by adding a range of example using different r
 
 
 ```{r}
-density_function <- function(x, rate, mean, sigma, n = 30) {
+ll <- function(beta, mean, sigma, n = 30) {
+  # Compute the log-likelihood(s)
+  sapply(beta, function(x) n*log(dnorm(mean - x, mean = 0, sd = sigma)))
+}
+
+dlaplace <- function(x, rate = 1) {
+  dexp(abs(x), rate) / 2
+}
+
+density_function <- function(x, rate, mean, sigma, n = 30, multiplier = 1) {
 
   prior <- log(dlaplace(x, rate = rate))
   llik <- ll(beta = x, mean = mean, sigma = sigma, n = n)
-  return(exp(prior + llik))
+  return(exp(prior + llik + sqrt(2)*n + log(multiplier)))
 
 }
 
-density_function_normalized <- function(x, rate, mean, sigma, n = 30, normalizer) {
+density_function_normalized <- function(x, rate, mean, sigma, n = 30, normalizer, multiplier = 1) {
 
   prior <- log(dlaplace(x, rate = rate))
   llik <- ll(beta = x, mean = mean, sigma = sigma, n = n)
-  return(exp(prior + llik - log(normalizer)))
+  return(exp(prior + llik - log(normalizer) + sqrt(2)*n + log(multiplier)))
 
 }
 
-obj_simple <- function(beta, post_mode, p, rate, mean, sigma, n = 30) {
+obj_simple <- function(beta, p, mean, sigma, rate, bounds, n = 30, multiplier = 1) {
 
-  rng <- Inf
   denom <- integrate(
-    density_function, lower = post_mode-rng, upper = post_mode+rng, rate, mean, sigma, n
+    density_function, lower = bounds[1], upper = bounds[2], rate, mean, sigma, n, multiplier
   )$value
 
   if (p > .5) {
     prob <- integrate(
-      density_function_normalized, lower = post_mode, upper = beta,
-      rate = rate, mean = mean, sigma = sigma, n = n,
-      normalizer = denom
+      density_function_normalized, lower = bounds[1], upper = beta, rate, mean, sigma, n, normalizer = denom, multiplier
     )$value
   } else {
     prob <- integrate(
-      density_function_normalized, lower = beta, upper = post_mode,
-      rate = rate, mean = mean, sigma = sigma, n = n,
-      normalizer = denom
-    )$value
-  }
-
-  sig <- abs((1-2*p))
-  return((sig/2) - prob)
-
-}
-
-
-## Objective for integrating from lower and upper bounds
-obj <- function(beta, p, mean, sigma, rate, bounds, multiplier = 1) {
-
-
-  ## Determine normalizing constant
-  denom <- integrate(
-    density_function, lower = bounds[1], upper = bounds[2],
-    rate = rate, mean = mean, sigma = sigma, xvar = xvar, multiplier = multiplier
-  )$value
-
-  if (p > .5) {
-    prob <- integrate(
-      density_function_normalized, lower = bounds[1], upper = beta,
-      rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar,
-      normalizer = denom, multiplier = multiplier
-    )$value
-  } else {
-    prob <- integrate(
-      density_function_normalized, lower = beta, upper = bounds[2],
-      rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar,
-      normalizer = denom, multiplier = multiplier
+      density_function_normalized, lower = beta, upper = bounds[2], rate, mean, sigma, n, normalizer = denom, multiplier
     )$value
     prob <- 1 - prob
   }
@@ -90,55 +64,74 @@ obj <- function(beta, p, mean, sigma, rate, bounds, multiplier = 1) {
 
 }
 
-post_quant <- function(conf, mean = 0, sigma = 1, rate = 1, n = 30) {
+post_quant <- function(sig, post_mode, mean = 0, sigma = 1, rate = 1, n = 30, plot = FALSE) {
   
-  ## Posterior plot
-  xvals <- seq(-10, 10, by = .01)
-  yvals <- density_function(xvals, rate, mean, sigma, n)
-  post_mode <- xvals[which.max(yvals)]
+  mltplyr <- 1 / density_function(post_mode, rate, mean, sigma, n, multiplier = 1)
   
-  rng <- Inf
+  ## Determine the normalizing constant
   denom <- integrate(
-    density_function, lower = post_mode-rng, upper = post_mode+rng, rate, mean, sigma, n
+    density_function, lower = -Inf, upper = Inf,
+    rate = rate, mean = mean, sigma = sigma, n = n, multiplier = mltplyr
   )$value
-  print(denom)
   
-  yvals <- density_function_normalized(xvals, rate, mean, sigma, n, denom)
-  post_mode <- xvals[which.max(yvals)]
+  ## Find the largest density, used for determining bounds of integration / plotting
+  ymode <- density_function_normalized(post_mode, rate, mean, sigma, n, denom, multiplier = mltplyr)
+  ## Determine bounds
+  step <- .01
+  curr <- step
+  while (TRUE) {
+    xvals <- post_mode + c(-1, 1)*curr
+    yvals <- density_function_normalized(xvals, rate, mean, sigma, n, denom, multiplier = mltplyr)
+
+    if (all(yvals < (ymode / 100))) {break} else {curr <- curr + step}
+  }
+
+  ## Redetermine normalizing constant based on new bounds
+  denom <- integrate(
+    density_function, lower = post_mode - curr, upper = post_mode + curr,
+    rate = rate, mean = mean, sigma = sigma, n = n, multiplier = mltplyr
+  )$value
   
-  ## Check
-  print(integrate(
-      density_function_normalized, lower = -rng, upper = rng,
-      rate = rate, mean = mean, sigma = sigma, n = n,
-      normalizer = denom
-    )$value)
+
+  ## Determine the bounds
+  p <- sig + ((1 - sig) / 2)
+  lower <- uniroot(obj_simple, c(post_mode - curr, post_mode + curr), p, mean, sigma, rate, c(post_mode - curr, post_mode + curr), n, multiplier = mltplyr)
+  upper <- uniroot(obj_simple, c(post_mode - curr, post_mode + curr), 1 - p, mean, sigma, rate, c(post_mode - curr, post_mode + curr), n, multiplier = mltplyr)
   
-  upper <- uniroot(obj_simple, c(post_mode, post_mode + 10), post_mode, conf + (1 - conf)/2, rate, mean, sigma, n)
-  lower <- uniroot(obj_simple, c(post_mode - 10, post_mode), post_mode, (1 - conf)/2, rate, mean, sigma, n)
-  ci <- c(lower$root, upper$root)
+  bounds <- c(lower$root, upper$root)
+  
+  ## Produce a plot of the posterior, posterior mode, prior, and likelihood
+  if (plot) {
+    xvals <- seq(post_mode - curr, post_mode + curr, by = .01)
+    yvals <- density_function_normalized(xvals, rate, mean, sigma, n, denom, multiplier = mltplyr)
+    priory <- dlaplace(xvals, rate = rate) * (ymode / dlaplace(0, rate = rate))
+    liky <- exp(ll(beta = xvals, mean = mean, sigma = sigma, n = n))
+    liky <- (liky / max(liky)) * ymode
+    plot(xvals, yvals, type = "l", lty = 1)
+    lines(xvals, priory, col = "blue", lty = 2)
+    lines(xvals, liky, col = "blue", lty = 2)
+    abline(v = post_mode, col = "red")
+    abline(v = bounds, col = "red", lty = 2)
+  }
   
   
-  plot(xvals, yvals, type = "l")
-  abline(v = ci, col = "red")
-  
-  return(ci)
+  return(bounds)
 
 }
 ```
 
 
-```{r}
-post_quant(.8, mean = 2, n = 10)
-post_quant(.8, mean = 2, n = 30)
-post_quant(.8, mean = 2, n = 100)
-post_quant(.8, mean = 2, n = 300)
-post_quant(.8, mean = 2, n = 500)
-post_quant(.8, mean = 2, n = 700)
-```
 
-However, it does not break down if the true distribution is centered at zero:
 
 ```{r}
-post_quant(.8, mean = 0, n = 300)
+post_quant(sig = .8, post_mode = 0, mean = 0, n = 30, rate = 1, plot = TRUE)
 ```
 
+```{r}
+post_quant(sig = .8, post_mode = 0, mean = 0, n = 300, rate = 1, plot = TRUE)
+```
+
+
+```{r}
+post_quant(sig = .8, post_mode = 0, mean = 0, n = 300, rate = 10, plot = TRUE)
+```
