@@ -53,7 +53,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
       if (plot) {
         
         ## One of the main hurdles is making sure this quantity is finite
-        mltplyr <- 1 / density_function(post_mode, rate, partial_residuals, sigma, xvar, multiplier = 1)
+        mltplyr <- -log_density_function(post_mode, rate, partial_residuals, sigma, xvar)
       
         ## Determine the normalizing constant
         denom <- integrate(
@@ -110,7 +110,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
 ### Ten Examples {.tabset}
 
 ```{r}
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 10)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 300, niter = 1)
 ```
 
 ```{r}

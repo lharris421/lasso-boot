@@ -31,7 +31,16 @@ density_function <- function(x, rate, partial_residuals, sigma, xvar, multiplier
 
   prior <- log(dlaplace(x, rate = rate))
   llik <- ll(beta = x, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar)
-  return(exp(prior + llik + sqrt(2)*length(partial_residuals) + log(multiplier)))
+  return(exp(prior + llik + multiplier))
+
+}
+
+## Computing density for a given beta for the posterior
+log_density_function <- function(x, rate, partial_residuals, sigma, xvar) {
+
+  prior <- log(dlaplace(x, rate = rate))
+  llik <- ll(beta = x, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar)
+  return(prior + llik)
 
 }
 
@@ -40,7 +49,7 @@ density_function_normalized <- function(x, rate, partial_residuals, sigma, xvar,
 
   prior <- log(dlaplace(x, rate = rate))
   llik <- ll(beta = x, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar)
-  return(exp(prior + llik + sqrt(2)*length(partial_residuals) - log(normalizer) + log(multiplier)))
+  return(exp(prior + llik - log(normalizer) + multiplier))
 
 }
 
@@ -76,7 +85,8 @@ obj <- function(beta, p, sigma, rate, xvar, partial_residuals, bounds, multiplie
 post_quant <- function(p, post_mode, sigma, rate, xvar, partial_residuals) {
 
   ## One of the main hurdles is making sure this quantity is finite
-  mltplyr <- 1 / density_function(post_mode, rate, partial_residuals, sigma, xvar, multiplier = 1)
+  mltplyr <- -log_density_function(post_mode, rate, partial_residuals, sigma, xvar)
+  ## print(density_function(post_mode, rate, partial_residuals, sigma, xvar, mltplyr))
 
   ## Determine the normalizing constant
   denom <- integrate(
@@ -104,7 +114,7 @@ post_quant <- function(p, post_mode, sigma, rate, xvar, partial_residuals) {
   )$value
 
   ## Determine the bounds
-  res <- uniroot(obj, c(post_mode - curr, post_mode + curr), p, sigma, rate, xvar, partial_residuals, c(post_mode - curr, post_mode + curr))
+  res <- uniroot(obj, c(post_mode - curr, post_mode + curr), p, sigma, rate, xvar, partial_residuals, c(post_mode - curr, post_mode + curr), mltplyr)
   return(res$root)
 
 }
