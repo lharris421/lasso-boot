@@ -9,97 +9,10 @@ output:
 ```{r setup, child = 'web/_include/setup.rmd'}
 ```
 
-I'm sorry, right now different versions of these functions live in different notebooks. If they look like they are going to have a longer lifespan, I will work on integrating them into a single function. 
 
 ```{r}
 source("./R/bayes_functions.R")
-eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
-  
-  dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n)
-  
-  tbeta <- dat$beta
-  X <- dat$X
-  y <- dat$y
-  
-  lowers <- matrix(nrow = niter, ncol = length(tbeta))
-  uppers <- matrix(nrow = niter, ncol = length(tbeta))
-  if (plot) {plot_data <- list()}
-  
-  for (i in 1:niter) {
 
-    idx_new <- sample(1:length(y), replace = TRUE)
-    ynew <- y[idx_new]
-    xnew <- X[idx_new,,drop=FALSE]
-    
-    cv_res <- cv.ncvreg(xnew, ynew, penalty = "lasso")
-    sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]
-    lam <- cv_res$lambda.min
-    coefs <- coef(cv_res$fit, lambda = lam)
-    rate <- (lam*n / sigma2)
-    
-    ## Beta specific
-    for (j in 1:length(tbeta)) {
-      
-      partial_residuals <- ynew - (coefs[1] + xnew[,-j,drop=FALSE] %*% coefs[-1][-j])
-      post_mode <- coefs[-1][j]
-      sigma <- sqrt(sigma2)
-      xvar <- xnew[,j,drop=FALSE]
-      
-      ## Need to compress this into a single call in future
-      uppers[i,j] <- post_quant(.9, post_mode, sigma, rate, xvar, partial_residuals)
-      lowers[i,j] <- post_quant(.1, post_mode, sigma, rate, xvar, partial_residuals)
-      
-      ## Produce a plot of the posterior, posterior mode, prior, and likelihood
-      if (plot) {
-        
-        ## One of the main hurdles is making sure this quantity is finite
-        mltplyr <- -log_density_function(post_mode, rate, partial_residuals, sigma, xvar)
-      
-        ## Determine the normalizing constant
-        denom <- integrate(
-          density_function, lower = -Inf, upper = Inf,
-          rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar, multiplier = mltplyr
-        )$value
-      
-        ## Find the largest density, used for determining bounds of integration / plotting
-        ymode <- density_function_normalized(post_mode, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
-      
-        ## Determine bounds
-        step <- .01
-        curr <- step
-        while (TRUE) {
-          xvals <- post_mode + c(-1, 1)*curr
-          yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
-      
-          if (all(yvals < (ymode / 100))) {break} else {curr <- curr + step}
-        }
-      
-        ## Redetermine normalizing constant based on new bounds
-        denom <- integrate(
-          density_function, lower = post_mode - curr, upper = post_mode + curr,
-          rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar, multiplier = mltplyr
-        )$value
-        
-        xvals <- seq(post_mode - curr, post_mode + curr, by = .01)
-        yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
-        priory <- dlaplace(xvals, rate = rate) * (ymode / dlaplace(0, rate = rate))
-        liky <- exp(ll(beta = xvals, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar))
-        liky <- (liky / max(liky)) * ymode
-        plot_data[[i]] <- list(data.frame(x = xvals, posterior = yvals, prior = priory, lik = liky), post_mode = post_mode, lower = lowers[i,j], upper = uppers[i,j], lambda = lam)
-      }
-    
-      
-    }
-    
-  }
-  
-  if (plot) {
-    return(list("res" = list("lower" = lowers, "upper" = uppers, "truth" = tbeta), "plots" = plot_data))
-  } else {
-    return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta)) 
-  }
-  
-}
 ```
 
 
@@ -110,53 +23,15 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = TRUE) {
 ### Ten Examples {.tabset}
 
 ```{r}
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 300, niter = 1)
+library(tictoc)
+tic()
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 1000) ## 23 seconds for 1000
+toc()
 ```
 
 ```{r}
 library(ggplot2)
 library(plotly)
-
-
-create_plots <- function(tmp) {
-  
-  plot_data <- tmp$plots
-
-  # Initialize a list to store the plots
-  plotly_plots <- list()
-
-  # Iterate through the plot_data list
-  for (i in seq_along(plot_data)) {
-    # Extract the data for this plot
-    data <- plot_data[[i]][[1]]
-  
-    # Create a data frame for ggplot
-    plot_df <- data.frame(
-      x = data$x,
-      posterior = data$posterior,
-      prior = data$prior,
-      lik = data$lik
-    )
-  
-    # Create the ggplot object
-    p <- ggplot(plot_df, aes(x = x)) +
-      geom_line(aes(y = posterior), color = "purple") +
-      geom_line(aes(y = prior), color = "red") +
-      geom_line(aes(y = lik), color = "blue") +
-      geom_vline(xintercept = plot_data[[i]]$post_mode, color = "purple") +
-      geom_vline(xintercept = plot_data[[i]]$lower, color = "purple", linetype="dashed") +
-      geom_vline(xintercept = plot_data[[i]]$upper, color = "purple", linetype="dashed") +
-      labs(title = paste("Lambda: ", round(plot_data[[i]]$lambda, 4)), x = "Beta", y = "Posterior Density") 
-  
-    # Convert to ggplotly and store in the list
-    plotly_plots[[i]] <- ggplotly(p)
-    
-  }
-  
-  return(plotly_plots)
-  
-}
-
 
 plotly_plots <- create_plots(tmp)
 plotly_plots[[1]]
@@ -236,12 +111,14 @@ mean(res$overall_cov)
 ### Single Example
 
 ```{r, eval = FALSE}
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), plot = FALSE)
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/many_single_simple.rds")
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), plot = FALSE, type = "normal") ## 88 seconds for 100 iterations
+toc()
+save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/many_single_normal.rds")
 ```
 
 ```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/many_single_simple.rds")
+load("/Users/loganharris/github/lasso-boot/web/data/many_single_normal.rds")
 plot_boot(tmp)
 ```
 
@@ -270,4 +147,143 @@ hist(res$overall_cov, xlab = "Coverage", main ="")
 ```{r}
 tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
 plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+
+
+
+## n = p
+
+Here, I simply increase the number of true zeros. What I was interested in seeing was: 1) does the increase in sparsity effect the coverage of the non-zero coefficients, 2) Does it impact the marginal coverage rate?
+
+### Single Example
+
+```{r, eval = FALSE}
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100, plot = FALSE) ## 135 seconds 
+toc()
+save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds")
+```
+
+```{r}
+load("/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds")
+plot_boot(tmp)
+```
+
+
+### Coverage
+
+```{r, eval = FALSE}
+set.seed(123)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100)
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds")
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds")
+```
+
+#### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov)
+```
+
+#### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage)
+```
+
+
+## n < p
+
+### Single Example
+
+```{r, eval = FALSE}
+tic()
+set.seed(1234)
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 600, plot = FALSE) ## 1068.548 seconds 
+toc()
+save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nlp_single_simple.rds")
+```
+
+```{r}
+load("/Users/loganharris/github/lasso-boot/web/data/nlp_single_simple.rds")
+plot_boot(tmp)
+```
+
+## n << p
+
+### Single Example
+
+```{r, eval = FALSE}
+tic()
+set.seed(1234)
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 6000, plot = FALSE) ## 10909.242 seconds 
+toc()
+save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nllp_single_simple.rds")
+```
+
+```{r}
+load("/Users/loganharris/github/lasso-boot/web/data/nlp_single_simple.rds")
+plot_boot(tmp)
+```
+
+
+
+# Speed Comparison
+
+## Single Covariate
+
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 1000, type = "univariate", plot = FALSE) ## 9.288 seconds for 1000
+toc()
+c(mean(tmp$lower), mean(tmp$upper))
+c(median(tmp$lower), median(tmp$upper))
+```
+
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 1000, type = "normal", plot = FALSE) ## 7.181 seconds for 1000
+toc()
+c(mean(tmp$lower), mean(tmp$upper))
+c(median(tmp$lower), median(tmp$upper))
+```
+
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 1000, type = "original", plot = FALSE) ## 10.572 seconds for 1000
+toc()
+c(mean(tmp$lower), mean(tmp$upper))
+c(median(tmp$lower), median(tmp$upper))
+```
+
+## Many Covariate
+
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, b = 0, niter = 1000, type = "univariate", plot = FALSE) ## ERROR
+toc()
+```
+
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, b = 0, niter = 1000, type = "normal", plot = FALSE) ## 78.26 seconds for 1000
+toc()
+```
+
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, b = 0, niter = 1000, type = "original", plot = FALSE) ## 10.572 seconds for 1000
+toc()
 ```

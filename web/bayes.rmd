@@ -47,51 +47,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ncvreg)
 library(statmod)
 library(ggplot2)
-
-eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, plot = FALSE) {
-  
-  ## set.seed(12345)
-  dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n)
-  
-  tbeta <- dat$beta
-  X <- dat$X
-  y <- dat$y
-  
-  lowers <- matrix(nrow = niter, ncol = length(tbeta))
-  uppers <- matrix(nrow = niter, ncol = length(tbeta))
-  for (i in 1:niter) {
-    
-    idx_new <- sample(1:length(y), replace = TRUE)
-    ynew <- y[idx_new]
-    xnew <- X[idx_new,,drop=FALSE]
-    
-    cv_res <- cv.ncvreg(xnew, ynew, penalty = "lasso")
-    sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]
-    lam <- cv_res$lambda.min
-    coefs <- coef(cv_res$fit, lambda = lam)
-    
-    t2i_scale <- lam^2
-    
-    ## Beta specific
-    for (j in 1:length(tbeta)) {
-      
-      r <- ynew - (coefs[1] + xnew[,-j] %*% coefs[-1][-j])
-      beta <- coefs[-1][j]
-      tau2i_mu <- sqrt((sigma2*lam^2) / beta^2)
-      tau2 <- 1 / rinvgauss(1, tau2i_mu, t2i_scale)
-      
-      A <- (t(xnew[,j, drop=FALSE]) %*% xnew[,j,drop=FALSE]) + (1/tau2)
-      mu <- solve(A)*(t(xnew[,j,drop=FALSE]) %*% r)
-      ci <- qnorm(c(.1, .9), mu, sqrt(sigma2*solve(A)))
-      lowers[i,j] <- ci[1]; uppers[i,j] <- ci[2]
-      
-    }
-    
-  }
-  
-  return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta))
-  
-}
 ```
 
 Interval widths are set to be 80%.

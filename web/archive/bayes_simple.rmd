@@ -5,91 +5,51 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+# Plotting code
+
+```{r}
+## Produce a plot of the posterior, posterior mode, prior, and likelihood
+      if (plot & type == "original") {
+        
+        ## One of the main hurdles is making sure this quantity is finite
+        mltplyr <- -log_density_function(post_mode, rate, partial_residuals, sigma, xvar)
+      
+        ## Determine the normalizing constant
+        denom <- integrate(
+          density_function, lower = -Inf, upper = Inf,
+          rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar, multiplier = mltplyr
+        )$value
+      
+        ## Find the largest density, used for determining bounds of integration / plotting
+        ymode <- density_function_normalized(post_mode, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
+      
+        ## Determine bounds
+        step <- .01
+        curr <- step
+        while (TRUE) {
+          xvals <- post_mode + c(-1, 1)*curr
+          yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
+          print(ymode)
+          if (all(yvals < (ymode / 100))) {break} else {curr <- curr + step}
+        }
+      
+        ## Redetermine normalizing constant based on new bounds
+        denom <- integrate(
+          density_function, lower = post_mode - curr, upper = post_mode + curr,
+          rate = rate, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar, multiplier = mltplyr
+        )$value
+        
+        xvals <- seq(post_mode - curr, post_mode + curr, by = .01)
+        yvals <- density_function_normalized(xvals, rate, partial_residuals, sigma, xvar, denom, multiplier = mltplyr)
+        priory <- dlaplace(xvals, rate = rate) * (ymode / dlaplace(0, rate = rate))
+        liky <- exp(ll(beta = xvals, partial_residuals = partial_residuals, sigma = sigma, xvar = xvar))
+        liky <- (liky / max(liky)) * ymode
+        plot_data[[i]] <- list(data.frame(x = xvals, posterior = yvals, prior = priory, lik = liky), post_mode = post_mode, lower = lowers[i,j], upper = uppers[i,j], lambda = lam)
+      }
+```
+
+
 # Many Covariates
-
-## Not High Dimensional
-
-### Single Example
-
-```{r, eval = FALSE}
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5))
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/many_single_simple.rds")
-```
-
-```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/many_single_simple.rds")
-plot_boot(tmp)
-```
-
-
-### Coverage
-
-```{r, eval = FALSE}
-set.seed(123)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5))
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/many_simple.rds")
-```
-
-```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/many_simple.rds")
-```
-
-#### Overall Coverage (per bootstrap)
-
-```{r}
-mean(res$overall_cov)
-hist(res$overall_cov)
-```
-
-#### Individual Coverage (per covariate)
-
-```{r}
-tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage)
-```
-
-## n = p
-
-Here, I simply increase the number of true zeros. What I was interested in seeing was: 1) does the increase in sparsity effect the coverage of the non-zero coefficients, 2) Does it impact the marginal coverage rate?
-
-### Single Example
-
-```{r, eval = FALSE}
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100)
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds")
-```
-
-```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds")
-plot_boot(tmp)
-```
-
-
-### Coverage
-
-```{r, eval = FALSE}
-set.seed(123)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100)
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds")
-```
-
-```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds")
-```
-
-#### Overall Coverage (per bootstrap)
-
-```{r}
-mean(res$overall_cov)
-hist(res$overall_cov)
-```
-
-#### Individual Coverage (per covariate)
-
-```{r}
-tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage)
-```
 
 ## Increating betas, Not High Dimensional
 
@@ -131,3 +91,4 @@ hist(res$overall_cov)
 tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
 plot(abs(tmp$beta), tmp$coverage)
 ```
+

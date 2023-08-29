@@ -11,6 +11,14 @@ output:
 
 I need to add dates to this to do list, and maybe format it so it is cleaner... maybe a data table?
 
+- [ ] Derive normal approximation throw taylor series expansion as comparison
+- [x] Look at SCAD (or other paper) for example of way to rewrite the likelihood in a way that may be faster to integrate over
+ - [ ] Try implimenting
+- [ ] Consider the speed at which the bootstrap works when considering other methods
+- [ ] Read paper mentioned about gaussian mirrors (ask patrick if can't find)
+- [ ] Look at univariate example when Beta is very small, say, beta = .01
+- [ ] Profile code to see what is expensive, I think it may be
+- [x] Update code with normalization constant on the log scale
 - [ ] Find a way to cleanly present the plots, maybe make ggplotly instead?
 - [ ] Look into variational bayes (again) for lasso, or generally if someone has tried to approximate the lasso posterior (numerically or annalytically)
 - [ ] Create mre for "Error: Supplied lambda value(s) are outside the range of the model fit."
@@ -39,10 +47,16 @@ I need to add dates to this to do list, and maybe format it so it is cleaner... 
 - I read "Analytic solution and stationary phase approximation for the Bayesian lasso and elastic net." This honestly fits perfectly into what we would need except for the fact that it does not work for lasso when the design matrix is rank deficient. This also concerns me because the paper is not too old (late 2018) suggesting to me that other analytic solutions (i.e. variational Bayes) may not exist for the lasso.
 - Potential papers for variational Bayes:
   - Variational Full Bayes Lasso: Knots Selection in Regression Splines (https://arxiv.org/pdf/2102.13548v1.pdf)
-  
-## Notes
 
 ## Action Items
+
+- Derive normal approximation throw taylor series expansion as comparison
+- Look at SCAD (or other paper) for example of way to rewrite the likelihood in a way that may be faster to integrate over
+ - Try implimenting
+- Consider the speed at which the bootstrap works when considering other methods
+- Read paper mentioned about gaussian mirrors (ask patrick if can't find)
+- Look at univariate example when Beta is very small, say, beta = .01
+- Profile code to see what is expensive, I think it may be
 
 # July 26th, 2023
 

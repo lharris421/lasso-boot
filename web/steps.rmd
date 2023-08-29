@@ -1,0 +1,22 @@
+---
+title: "dat setup"
+author: "Logan Harris"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## For mac
+
+1. Install homebrew:
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+2. brew install python
+3. Add pip to path: echo 'export PATH="$(brew --prefix python3)/bin:$PATH"' >> ~/.zshrc
+4. source ~/.zshrc
+5. pip3 --version to verify
+6. pip3 install git+https://github.com/pbreheny/dat
+7. Instal AWS CLI https://aws.amazon.com/cli/
+8. https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html
