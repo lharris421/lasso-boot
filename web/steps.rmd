@@ -20,3 +20,4 @@ knitr::opts_chunk$set(echo = TRUE)
 6. pip3 install git+https://github.com/pbreheny/dat
 7. Instal AWS CLI https://aws.amazon.com/cli/
 8. https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html
+  - Will try and provide more specific details

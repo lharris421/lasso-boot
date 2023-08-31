@@ -5,6 +5,10 @@ library(ncvreg) ## devtools::install_github("https://github.com/pbreheny/ncvreg/
 library(dplyr)
 library(stringr)
 library(np)
+library(ggplot2)
+library(plotly)
+library(tictoc)
+library(statmod)
 set.seed(1234)
 knitr::opts_chunk$set(
   cache = FALSE, 

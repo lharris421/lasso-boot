@@ -1,5 +1,5 @@
 ---
-title: "Simple Bayes"
+title: "Comparing Bayesian Methods"
 runtime: shiny
 output:
   html_document:
@@ -12,97 +12,182 @@ output:
 
 ```{r}
 source("./R/bayes_functions.R")
-
 ```
 
+This now focuses on:
+
+1) Comparing the different methods discussed
+2) Even more so on the normal approximation approach
 
 # One Covariate
 
 ## Beta = 0
 
-### Ten Examples {.tabset}
+### Single Interval
+
+#### Original
 
 ```{r}
-library(tictoc)
 tic()
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 1000) ## 23 seconds for 1000
+set.seed(12345)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100, type = "original")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
 toc()
 ```
 
-```{r}
-library(ggplot2)
-library(plotly)
-
-plotly_plots <- create_plots(tmp)
-plotly_plots[[1]]
-plotly_plots[[2]]
-plotly_plots[[3]]
-```
-
-
-Corresponding Intervals:
+#### Normal
 
 ```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100, type = "normal")
 print("Mean: ")
-print(c(mean(tmp$res$lower), mean(tmp$res$upper)))
+print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
-print(c(median(tmp$res$lower), median(tmp$res$upper)))
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
 ```
 
+#### Cadillac
+
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100, type = "cadillac")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
 
 ### Coverage
 
+#### Original
+
 ```{r, eval=FALSE}
-set.seed(1234)
+set.seed(12345)
 res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, niter = 100, nboot = 100)
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta0_cov_simple.rds")
-mean(res$overall_cov)
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta0_cov_original.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/beta0_cov_simple.rds")
+load("/Users/loganharris/github/lasso-boot/web/data/beta0_cov_original.rds")
+mean(res$overall_cov)
+```
+
+#### Normal
+
+```{r, eval=FALSE}
+set.seed(12345)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, niter = 100, nboot = 100, type = "normal")
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta0_cov_normal.rds")
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/beta0_cov_normal.rds")
+mean(res$overall_cov)
+```
+
+#### Cadillac
+
+```{r, eval=FALSE}
+set.seed(12345)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, niter = 100, nboot = 100, type = "cadillac")
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta0_cov_cadillac.rds")
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/beta0_cov_cadillac.rds")
 mean(res$overall_cov)
 ```
 
 ## Beta = 3
 
-### Ten Examples
+### Single Interval
+
+#### Original
 
 ```{r}
-beta3 <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 10)
-```
-
-```{r}
-plotly_plots <- create_plots(beta3)
-plotly_plots[[1]]
-plotly_plots[[2]]
-plotly_plots[[3]]
-```
-
-
-Corresponding intervals:
-
-```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 100, type = "original")
 print("Mean: ")
-c(mean(beta3$res$lower), mean(beta3$res$upper))
+print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
-c(median(beta3$res$lower), median(beta3$res$upper))
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
 ```
 
-### Coverage 
+#### Normal
 
-```{r, eval = FALSE}
-set.seed(1234)
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 100, type = "normal")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Cadillac
+
+```{r}
+tic()
+set.seed(12345)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 100, type = "cadillac")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+### Coverage
+
+#### Original
+
+```{r, eval=FALSE}
+set.seed(12345)
 res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, niter = 100, nboot = 100)
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_cov_simple.rds")
-mean(res$overall_cov)
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_cov_original.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov_simple.rds")
+load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov_original.rds")
 mean(res$overall_cov)
 ```
 
+#### Normal
+
+```{r, eval=FALSE}
+set.seed(12345)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, niter = 100, nboot = 100, type = "normal")
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_cov_normal.rds")
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov_normal.rds")
+mean(res$overall_cov)
+```
+
+#### Cadillac
+
+```{r, eval=FALSE}
+set.seed(12345)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, niter = 100, nboot = 100, type = "cadillac")
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_cov_cadillac.rds")
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov_cadillac.rds")
+mean(res$overall_cov)
+```
 
 # Many Covariates
 
@@ -110,180 +195,114 @@ mean(res$overall_cov)
 
 ### Single Example
 
-```{r, eval = FALSE}
-tic()
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), plot = FALSE, type = "normal") ## 88 seconds for 100 iterations
-toc()
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/many_single_normal.rds")
-```
+#### Original
 
 ```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/many_single_normal.rds")
+set.seed(12345)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original")
+toc()
 plot_boot(tmp)
 ```
 
+#### Normal
+
+```{r}
+set.seed(12345)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "normal")
+toc()
+plot_boot(tmp)
+```
+
+#### Cadillac
+
+```{r}
+set.seed(12345)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "cadillac")
+toc()
+plot_boot(tmp)
+```
 
 ### Coverage
 
+#### Original
+
 ```{r, eval = FALSE}
-set.seed(1234)
+set.seed(12345)
 res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5))
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/many_simple.rds")
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/many_simple_original.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/many_simple.rds")
+load("/Users/loganharris/github/lasso-boot/web/data/many_simple_original.rds")
 ```
 
-#### Overall Coverage (per bootstrap)
+##### Overall Coverage (per bootstrap)
 
 ```{r}
 mean(res$overall_cov)
 hist(res$overall_cov, xlab = "Coverage", main ="")
 ```
 
-#### Individual Coverage (per covariate)
+##### Individual Coverage (per covariate)
 
 ```{r}
 tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
 plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 ```
 
-
-
-
-## n = p
-
-Here, I simply increase the number of true zeros. What I was interested in seeing was: 1) does the increase in sparsity effect the coverage of the non-zero coefficients, 2) Does it impact the marginal coverage rate?
-
-### Single Example
+#### Normal
 
 ```{r, eval = FALSE}
-tic()
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100, plot = FALSE) ## 135 seconds 
-toc()
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds")
-```
-
-```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/nep_single_simple.rds")
-plot_boot(tmp)
-```
-
-
-### Coverage
-
-```{r, eval = FALSE}
-set.seed(123)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100)
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds")
+set.seed(12345)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "normal")
+save(res, file = "/Users/loganharris/github/lasso-boot/web/data/many_simple_normal.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/nep_simple.rds")
+load("/Users/loganharris/github/lasso-boot/web/data/many_simple_normal.rds")
 ```
 
-#### Overall Coverage (per bootstrap)
+##### Overall Coverage (per bootstrap)
 
 ```{r}
 mean(res$overall_cov)
-hist(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
 ```
 
-#### Individual Coverage (per covariate)
+##### Individual Coverage (per covariate)
 
 ```{r}
 tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 ```
 
-
-## n < p
-
-### Single Example
-
-```{r, eval = FALSE}
-tic()
-set.seed(1234)
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 600, plot = FALSE) ## 1068.548 seconds 
-toc()
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nlp_single_simple.rds")
-```
-
-```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/nlp_single_simple.rds")
-plot_boot(tmp)
-```
-
-## n << p
-
-### Single Example
-
-```{r, eval = FALSE}
-tic()
-set.seed(1234)
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 6000, plot = FALSE) ## 10909.242 seconds 
-toc()
-save(tmp, file = "/Users/loganharris/github/lasso-boot/web/data/nllp_single_simple.rds")
-```
-
-```{r}
-load("/Users/loganharris/github/lasso-boot/web/data/nlp_single_simple.rds")
-plot_boot(tmp)
-```
-
-
-
-# Speed Comparison
-
-## Single Covariate
+# Speed of Normal
 
 ```{r}
 tic()
 set.seed(12345)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 1000, type = "univariate", plot = FALSE) ## 9.288 seconds for 1000
-toc()
-c(mean(tmp$lower), mean(tmp$upper))
-c(median(tmp$lower), median(tmp$upper))
-```
-
-```{r}
-tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 1000, type = "normal", plot = FALSE) ## 7.181 seconds for 1000
-toc()
-c(mean(tmp$lower), mean(tmp$upper))
-c(median(tmp$lower), median(tmp$upper))
-```
-
-```{r}
-tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 1000, type = "original", plot = FALSE) ## 10.572 seconds for 1000
-toc()
-c(mean(tmp$lower), mean(tmp$upper))
-c(median(tmp$lower), median(tmp$upper))
-```
-
-## Many Covariate
-
-```{r}
-tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 3, b = 0, niter = 1000, type = "univariate", plot = FALSE) ## ERROR
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 60, n = 100, niter = 100, type = "normal")
 toc()
 ```
 
 ```{r}
 tic()
 set.seed(12345)
-tmp <- eb_boot(beta = 3, b = 0, niter = 1000, type = "normal", plot = FALSE) ## 78.26 seconds for 1000
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 600, n = 100, niter = 100, type = "normal")
 toc()
 ```
 
 ```{r}
-tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 3, b = 0, niter = 1000, type = "original", plot = FALSE) ## 10.572 seconds for 1000
-toc()
+# 1179.776 sec elapsed
+# tic()
+# set.seed(12345)
+# tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 6000, n = 100, niter = 100, type = "normal")
+# toc()
 ```
+
+
+
+

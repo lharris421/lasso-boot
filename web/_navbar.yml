@@ -1,10 +1,6 @@
 title: "Dissertation Work"
 left:
-  - text: "Emperical Bayes Bootstrap Intervals"
-    href: bayes.html
-  - text: "Simple Emperical Bayes Bootstrap Intervals"
+  - text: "Comparing Bayes Bootstrap Methods"
     href: bayes_simple.html
-  - text: "Simple Example"
-    href: simple_example.html
   - text: "Meeting Notes"
     href: meeting_notes.html

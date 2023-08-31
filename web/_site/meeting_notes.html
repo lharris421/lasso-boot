@@ -1664,13 +1664,7 @@ border-radius: 0px;
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
-  <a href="bayes.html">Emperical Bayes Bootstrap Intervals</a>
-</li>
-<li>
-  <a href="bayes_simple.html">Simple Emperical Bayes Bootstrap Intervals</a>
-</li>
-<li>
-  <a href="simple_example.html">Simple Example</a>
+  <a href="bayes_simple.html">Comparing Bayes Bootstrap Methods</a>
 </li>
 <li>
   <a href="meeting_notes.html">Meeting Notes</a>
@@ -1705,6 +1699,24 @@ border-radius: 0px;
 <p>I need to add dates to this to do list, and maybe format it so it is
 cleaner… maybe a data table?</p>
 <ul>
+<li><input type="checkbox" checked></input>Derive normal approximation
+using taylor series expansion as comparison</li>
+<li><input type="checkbox" checked></input>Look at SCAD (or other paper)
+for example of way to rewrite the likelihood in a way that may be faster
+to integrate over</li>
+<li><input type="checkbox" checked></input>Try implementing</li>
+<li><input type="checkbox"></input>Revisit to figure out what is causing
+errors</li>
+<li><input type="checkbox" checked></input>Consider the speed at which the
+bootstrap works when considering other methods</li>
+<li><input type="checkbox"></input>Read paper mentioned about gaussian mirrors
+(ask patrick if can’t find)</li>
+<li><input type="checkbox"></input>Look at univariate example when Beta is
+very small, say, beta = .01</li>
+<li><input type="checkbox"></input>Profile code to see what is expensive in
+the bayesian bootstrap</li>
+<li><input type="checkbox" checked></input>Update code with normalization
+constant on the log scale</li>
 <li><input type="checkbox"></input>Find a way to cleanly present the plots,
 maybe make ggplotly instead?</li>
 <li><input type="checkbox"></input>Look into variational bayes (again) for
@@ -1715,7 +1727,7 @@ value(s) are outside the range of the model fit.”</li>
 <li><input type="checkbox" checked></input>Look into bridge sampling
 <ul>
 <li>Seems more like a method to compute the marginal likelihood which
-doesn’t seem directly relavent for the current context since we really
+doesn’t seem directly relevant for the current context since we really
 need to get directly at the posterior</li>
 </ul></li>
 <li><input type="checkbox" checked></input>Work on simple versions first
@@ -1747,6 +1759,9 @@ of plots
 meaningless</li>
 </ul></li>
 </ul>
+</div>
+<div id="august-31st-2023" class="section level1">
+<h1>August 31st, 2023</h1>
 </div>
 <div id="august-16th-2023" class="section level1">
 <h1>August 16th, 2023</h1>
@@ -1788,11 +1803,22 @@ solutions (i.e. variational Bayes) may not exist for the lasso.</li>
 </ul></li>
 </ul>
 </div>
-<div id="notes" class="section level2">
-<h2>Notes</h2>
-</div>
 <div id="action-items" class="section level2">
 <h2>Action Items</h2>
+<ul>
+<li>Derive normal approximation throw taylor series expansion as
+comparison</li>
+<li>Look at SCAD (or other paper) for example of way to rewrite the
+likelihood in a way that may be faster to integrate over</li>
+<li>Try implimenting</li>
+<li>Consider the speed at which the bootstrap works when considering
+other methods</li>
+<li>Read paper mentioned about gaussian mirrors (ask patrick if can’t
+find)</li>
+<li>Look at univariate example when Beta is very small, say, beta =
+.01</li>
+<li>Profile code to see what is expensive</li>
+</ul>
 </div>
 </div>
 <div id="july-26th-2023" class="section level1">
@@ -1818,7 +1844,7 @@ model as the lasso solution).</li>
 <li>Would we like to set up a drop box to store data objects?</li>
 </ul>
 </div>
-<div id="notes-1" class="section level2">
+<div id="notes" class="section level2">
 <h2>Notes</h2>
 <ul>
 <li>Need to do a better job at taking notes during meeting</li>
