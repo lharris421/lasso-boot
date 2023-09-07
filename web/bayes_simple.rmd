@@ -12,6 +12,9 @@ output:
 
 ```{r}
 source("./R/bayes_functions.R")
+
+library(TeachingDemos)
+my_seed <- char2seed("Logan M. Harris")
 ```
 
 This now focuses on:
@@ -29,8 +32,21 @@ This now focuses on:
 
 ```{r}
 tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100, type = "original")
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "original")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Univariate
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate")
 print("Mean: ")
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
@@ -42,8 +58,8 @@ toc()
 
 ```{r}
 tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100, type = "normal")
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "normal")
 print("Mean: ")
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
@@ -55,8 +71,8 @@ toc()
 
 ```{r}
 tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100, type = "cadillac")
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "cadillac")
 print("Mean: ")
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
@@ -68,40 +84,54 @@ toc()
 
 #### Original
 
+
 ```{r, eval=FALSE}
-set.seed(12345)
-res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, niter = 100, nboot = 100)
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta0_cov_original.rds")
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "original")
+save(res, file = "./web/data/bayes_simple/beta0_original.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/beta0_cov_original.rds")
+load("./web/data/bayes_simple/beta0_original.rds")
+mean(res$overall_cov)
+```
+
+#### Univariate
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
+save(res, file = "./web/data/bayes_simple/beta0_univariate.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta0_univariate.rds")
 mean(res$overall_cov)
 ```
 
 #### Normal
 
 ```{r, eval=FALSE}
-set.seed(12345)
-res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, niter = 100, nboot = 100, type = "normal")
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta0_cov_normal.rds")
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "normal")
+save(res, file = "./web/data/bayes_simple/tst.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/beta0_cov_normal.rds")
+load("./web/data/bayes_simple/beta0_normal.rds")
 mean(res$overall_cov)
 ```
 
 #### Cadillac
 
 ```{r, eval=FALSE}
-set.seed(12345)
-res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, niter = 100, nboot = 100, type = "cadillac")
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta0_cov_cadillac.rds")
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "cadillac")
+save(res, file = "./web/data/bayes_simple/beta0_cadillac.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/beta0_cov_cadillac.rds")
+load("./web/data/bayes_simple/beta0_cadillac.rds")
 mean(res$overall_cov)
 ```
 
@@ -113,8 +143,8 @@ mean(res$overall_cov)
 
 ```{r}
 tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 100, type = "original")
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "original")
 print("Mean: ")
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
@@ -122,12 +152,26 @@ print(c(median(tmp$lower), median(tmp$upper)))
 toc()
 ```
 
+#### Univariate
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+
 #### Normal
 
 ```{r}
 tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 100, type = "normal")
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "normal")
 print("Mean: ")
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
@@ -139,8 +183,8 @@ toc()
 
 ```{r}
 tic()
-set.seed(12345)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 100, type = "cadillac")
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "cadillac")
 print("Mean: ")
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
@@ -153,39 +197,52 @@ toc()
 #### Original
 
 ```{r, eval=FALSE}
-set.seed(12345)
-res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, niter = 100, nboot = 100)
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_cov_original.rds")
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "original")
+save(res, file = "./web/data/bayes_simple/beta3_original.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov_original.rds")
+load("./web/data/bayes_simple/beta3_original.rds")
+mean(res$overall_cov)
+```
+
+#### Univariate
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
+save(res, file = "./web/data/bayes_simple/beta3_univariate.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta3_univariate.rds")
 mean(res$overall_cov)
 ```
 
 #### Normal
 
 ```{r, eval=FALSE}
-set.seed(12345)
-res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, niter = 100, nboot = 100, type = "normal")
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_cov_normal.rds")
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "normal")
+save(res, file = "./web/data/bayes_simple/beta3_normal.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov_normal.rds")
+load("./web/data/bayes_simple/beta3_normal.rds")
 mean(res$overall_cov)
 ```
 
 #### Cadillac
 
 ```{r, eval=FALSE}
-set.seed(12345)
-res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, niter = 100, nboot = 100, type = "cadillac")
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/beta3_cov_cadillac.rds")
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "cadillac")
+save(res, file = "./web/data/bayes_simple/beta3_cadillac.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov_cadillac.rds")
+load("./web/data/bayes_simple/beta3_cadillac.rds")
 mean(res$overall_cov)
 ```
 
@@ -198,9 +255,19 @@ mean(res$overall_cov)
 #### Original
 
 ```{r}
-set.seed(12345)
+set.seed(my_seed)
 tic()
 tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original")
+toc()
+plot_boot(tmp)
+```
+
+#### Univariate
+
+```{r}
+set.seed(my_seed)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate")
 toc()
 plot_boot(tmp)
 ```
@@ -208,7 +275,7 @@ plot_boot(tmp)
 #### Normal
 
 ```{r}
-set.seed(12345)
+set.seed(my_seed)
 tic()
 tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "normal")
 toc()
@@ -218,7 +285,7 @@ plot_boot(tmp)
 #### Cadillac
 
 ```{r}
-set.seed(12345)
+set.seed(my_seed)
 tic()
 tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "cadillac")
 toc()
@@ -230,13 +297,39 @@ plot_boot(tmp)
 #### Original
 
 ```{r, eval = FALSE}
-set.seed(12345)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5))
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/many_simple_original.rds")
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original")
+save(res, file = "./web/data/bayes_simple/many_original.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/many_simple_original.rds")
+load("./web/data/bayes_simple/many_original.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+#### Univariate
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate")
+save(res, file = "./web/data/bayes_simple/many_univariate.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_univariate.rds")
 ```
 
 ##### Overall Coverage (per bootstrap)
@@ -256,13 +349,66 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 #### Normal
 
 ```{r, eval = FALSE}
-set.seed(12345)
+set.seed(my_seed)
 res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "normal")
-save(res, file = "/Users/loganharris/github/lasso-boot/web/data/many_simple_normal.rds")
+save(res, file = "./web/data/bayes_simple/many_normal.rds")
 ```
 
 ```{r, echo=FALSE}
-load("/Users/loganharris/github/lasso-boot/web/data/many_simple_normal.rds")
+load("./web/data/bayes_simple/many_normal.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+#### Normal vs. Laplace
+
+```{r}
+rates <- c(1)
+sigma2 <- 2 / (rates^2)
+
+for (i in 1:length(sigma2)) {
+  xvals <- seq(-sqrt(sigma2[i])*4, sqrt(sigma2[i])*4, by = sqrt(sigma2[i])/10)
+  ynorm <- dnorm(xvals, 0, sqrt(sigma2[i]))
+  ylaplace <- dlaplace(xvals, rates[i])
+  plot(xvals, ylaplace, type = "l", col = "red")
+  lines(xvals, ynorm, col = "blue")
+}
+```
+
+```{r}
+for (i in 1:length(sigma2)) {
+  xvals <- seq(-sqrt(sigma2[i])*4, sqrt(sigma2[i])*4, by = sqrt(sigma2[i])/10)
+  ynorm <- dnorm(xvals, 0, sqrt(sigma2[i])) * dnorm(xvals, 3, 1) / sum(dnorm(xvals, 0, sqrt(sigma2[i])) * dnorm(xvals, 3, 1) )
+  ylaplace <- dlaplace(xvals, rates[i]) * dnorm(xvals, 3, 1) / sum(dlaplace(xvals, rates[i]) * dnorm(xvals, 3, 1))
+  plot(xvals, ynorm, type = "l", col = "blue")
+  lines(xvals, ylaplace, col = "red")
+  abline(v = xvals[which.max(ynorm)], col = "blue")
+  abline(v = xvals[which.max(ylaplace)], col = "red")
+}
+```
+
+#### Cadillac
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "cadillac")
+save(res, file = "./web/data/bayes_simple/many_cadillac.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_cadillac.rds")
 ```
 
 ##### Overall Coverage (per bootstrap)
@@ -283,26 +429,112 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 
 ```{r}
 tic()
-set.seed(12345)
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 60, n = 100, niter = 100, type = "normal")
+set.seed(my_seed)
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 60, n = 100, nboot = 100, type = "normal")
 toc()
 ```
 
 ```{r}
 tic()
-set.seed(12345)
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 600, n = 100, niter = 100, type = "normal")
+set.seed(my_seed)
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 600, n = 100, nboot = 100, type = "normal")
 toc()
 ```
 
 ```{r}
-# 1179.776 sec elapsed
+# # 1179.776 sec elapsed
 # tic()
-# set.seed(12345)
-# tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 6000, n = 100, niter = 100, type = "normal")
+# set.seed(my_seed)
+# tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 60000, n = 100, nboot = 100, type = "normal")
+# toc()
+# 
+# tic()
+# dat <- genDataABN(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 600, a = 6, b = 2, n = 100)
 # toc()
 ```
 
+# Debiasing?
 
+## Univariate
 
+### Single Covariate (Beta = 0)
 
+#### Single Example
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", debias = TRUE)
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Coverage
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate", debias = TRUE)
+save(res, file = "./web/data/bayes_simple/beta0_univariate_debias.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta0_univariate_debias.rds")
+mean(res$overall_cov)
+```
+
+### Single Covariate (Beta = 3)
+
+#### Single Example
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", debias = TRUE)
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Coverage
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate", debias = TRUE)
+save(res, file = "./web/data/bayes_simple/beta3_univariate_debias.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta3_univariate_debias.rds")
+mean(res$overall_cov)
+```
+
+### n > p
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate", debias = TRUE)
+save(res, file = "./web/data/bayes_simple/many_univariate_debias.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_univariate_debias.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```

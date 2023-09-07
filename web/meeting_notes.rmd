@@ -16,7 +16,7 @@ I need to add dates to this to do list, and maybe format it so it is cleaner... 
  - [x] Try implementing
  - [ ] Revisit to figure out what is causing errors
 - [x] Consider the speed at which the bootstrap works when considering other methods
-- [ ] Read paper mentioned about gaussian mirrors (ask patrick if can't find)
+- [ ] Read paper mentioned about gaussian mirrors 
 - [ ] Look at univariate example when Beta is very small, say, beta = .01
 - [ ] Profile code to see what is expensive in the bayesian bootstrap
 - [x] Update code with normalization constant on the log scale
@@ -37,8 +37,9 @@ I need to add dates to this to do list, and maybe format it so it is cleaner... 
 - [x] Create "non-normalized" versions of plots
   - Doesn't seem viable as this causes plots to essentially be meaningless
 
-# August 31st, 2023
+# Week of Monday, September 4th, 2023
 
+- SNR not working as expected?
 
 
 # August 16th, 2023
@@ -55,7 +56,7 @@ I need to add dates to this to do list, and maybe format it so it is cleaner... 
 
 ## Action Items
 
-- Derive normal approximation throw taylor series expansion as comparison
+- Derive normal approximation through taylor series expansion as comparison
 - Look at SCAD (or other paper) for example of way to rewrite the likelihood in a way that may be faster to integrate over
  - Try implimenting
 - Consider the speed at which the bootstrap works when considering other methods

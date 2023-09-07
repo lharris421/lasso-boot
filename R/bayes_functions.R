@@ -94,7 +94,7 @@ post_quant <- function(sig, post_mode, sigma, rate, xvar, partial_residuals, typ
     yvals <- density_function(
       x = xvals, rate = rate, partial_residuals = partial_residuals,
       sigma = sigma, xvar = xvar,
-      ## normalizer = denom,
+      normalizer = denom,
       multiplier = multiplier,
       type = type, ynew = ynew
     )
@@ -148,31 +148,54 @@ plot_boot <- function(eb_boot) {
 
 }
 
-eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, type = "original", prog = FALSE) {
+dens <- function(x, z, lambda, sigma2, normalizer = 1) {
 
-  dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n)
+  return((exp((-.5/sigma2)*(z - x)^2) / exp(lambda*abs(x))) / normalizer)
+  ## return((exp((-.5)*(z - x)^2) / exp(lambda*abs(x))) / normalizer)
+
+}
+
+obj_simp <- function(beta, p, z, lambda, sigma2, normalizer, lwr) {
+
+  prob <- integrate(
+    dens, lower = lwr, upper = beta,
+    z = z, lambda = lambda, sigma2 = sigma2, normalizer = normalizer
+  )$value
+
+  return(p - prob)
+
+}
+
+eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original", prog = FALSE, sgm = 1, debias = FALSE) {
+
+  dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n, sgm = sgm)
 
   tbeta <- dat$beta
   X <- dat$X
   y <- dat$y
 
-  lowers <- matrix(nrow = niter, ncol = length(tbeta))
-  uppers <- matrix(nrow = niter, ncol = length(tbeta))
+  lowers <- matrix(nrow = nboot, ncol = length(tbeta))
+  uppers <- matrix(nrow = nboot, ncol = length(tbeta))
 
-  if (prog) pb <- txtProgressBar(1, niter, style=3)
+  if (prog) pb <- txtProgressBar(1, nboot, style=3)
 
-  for (i in 1:niter) {
+  for (i in 1:nboot) {
 
     idx_new <- sample(1:length(y), replace = TRUE)
     ynew <- y[idx_new]
     xnew <- X[idx_new,,drop=FALSE]
+    xnew <- ncvreg::std(xnew)
 
-    if (type == "univariate") {xnew <- ncvreg::std(xnew)}
+    ## Make orthonormal
+    ## if (type == "univariate") {xnew <- ncvreg::std(xnew); xnew <- xnew / sqrt(length(ynew))}
+    ## if (type == "univariate") {xnew <- ncvreg::std(xnew)}
     cv_res <- cv.ncvreg(xnew, ynew, penalty = "lasso")
     sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
     lam <- cv_res$lambda.min
     coefs <- coef(cv_res$fit, lambda = lam)
     rate <- (lam*n / sigma2)
+
+    if (type == "univariate") sigma2 <- sigma2 / length(ynew)
 
     ## Beta specific
     for (j in 1:length(tbeta)) {
@@ -185,21 +208,71 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, type = "original"
       ## Need to compress this into a single call in future
       if (type == "univariate") {
 
-        sigma <- sigma / sqrt(n)
-        bounds <- post_quant(.8, post_mode, sigma, rate, xvar, partial_residuals, type = type, ynew) * attr(xnew, "scale")[j]^(-1)
+        ## z <- (1/length(partial_residuals))*as.numeric(t(xvar) %*% ynew)
+        z <- (1/length(partial_residuals))*as.numeric(t(xvar) %*% partial_residuals)
+        ## z <- as.numeric(t(xvar) %*% ynew)
+        ## z <- as.numeric(t(xvar) %*% partial_residuals)
+        ## z <- post_mode
+        ## sigma2 <- sigma2 / length(partial_residuals)
+        lam <- lam ## standardized with sd not length n??
+        denom <- integrate(
+          dens, lower = -Inf, upper = Inf,
+          z = z, lambda = lam, sigma2 = sigma2
+        )$value
+
+        ## Find the largest density, used for determining bounds for uniroot
+        ymode <- dens(
+          x = post_mode, z = z, lambda = lam, sigma2 = sigma2,
+          normalizer = denom
+        )
+
+        ## Determine bounds
+        step <- sqrt(sigma2)
+        curr <- step
+        while (TRUE) {
+
+          xvals <- post_mode + c(-1, 1)*curr
+          yvals <- dens(
+            x = xvals, z = z, lambda = lam, sigma2 = sigma2,
+            normalizer = denom
+          )
+
+          if (all(yvals < (ymode / 1000))) {
+            break
+          } else {
+            curr <- curr + step
+          }
+        }
+
+        denom <- integrate(
+          dens, lower = post_mode - curr, upper = post_mode + curr,
+          z = z, lambda = lam, sigma2 = sigma2
+        )$value
+
+        lower <- uniroot(
+          obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
+          z = z, lambda = lam, sigma2 = sigma2, normalizer = denom, lwr = post_mode - curr
+        )$root
+        upper <- uniroot(
+          obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
+          z = z, lambda = lam, sigma2 = sigma2, normalizer = denom, lwr = post_mode - curr
+        )$root
+
+        ## bounds <- c(lower, upper) * (sqrt(length(ynew))*attr(xnew, "scale")[j])^(-1)
+        bounds <- (c(lower, upper) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
 
       } else if (type == "original") {
 
-        bounds <- post_quant(.8, post_mode, sigma, rate, xvar, partial_residuals, type = type, ynew)
+        bounds <- (post_quant(.8, post_mode, sigma, rate, xvar, partial_residuals, type = type, ynew) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
 
       } else if (type == "normal") {
 
         n <- length(ynew)
-        information_inv <- (2*sigma2^2) / (2*(t(xvar) %*% xvar)*sigma2 + n^2*lam^2)
-        # score <- (1/sigma2)*(t(partial_residuals) %*% xvar - (t(xvar) %*% xvar + 1)*post_mode)
-        score <- (1/sigma2)*(t(partial_residuals) %*% xvar - post_mode*(t(xvar) %*% xvar + ((n^2*lam^2) / (2*sigma2))))
-        norm_mean <- post_mode - (information_inv * score)
-        bounds <- qnorm(c(.1, .9), norm_mean, sqrt(information_inv))
+        # score <- (1/sigma2)*(t(partial_residuals) %*% xvar - post_mode*(t(xvar) %*% xvar + ((n^2*lam^2) / (2*sigma2))))
+        # norm_mean <- post_mode - (information_inv * score)
+        norm_mean <- (2*sigma2*t(xvar) %*% partial_residuals) * (2*sigma2*t(xvar) %*% xvar + n^2*lam^2)^(-1)
+        norm_var <- (2*sigma2^2) / (2*(t(xvar) %*% xvar)*sigma2 + n^2*lam^2)
+        bounds <- (qnorm(c(.1, .9), norm_mean, sqrt(norm_var)) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
 
       } else if (type == "cadillac") {
 
@@ -211,7 +284,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, type = "original"
 
         A <- (t(xnew[,j, drop=FALSE]) %*% xnew[,j,drop=FALSE]) + (1/tau2)
         mu <- solve(A)*(t(xnew[,j,drop=FALSE]) %*% r)
-        bounds <- qnorm(c(.1, .9), mu, sqrt(sigma2*solve(A)))
+        bounds <- (qnorm(c(.1, .9), mu, sqrt(sigma2*solve(A))) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
 
       } else {
 
@@ -232,17 +305,17 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100, type = "original"
 
 }
 
-eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, niter = 100, nboot = 100, type = "original") {
+eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, nboot = 100, nsim = 100, type = "original", debias = FALSE) {
 
-  overall_cov <- numeric(nboot)
-  indiv_cov <- matrix(nrow = nboot, ncol = p)
+  overall_cov <- numeric(nsim)
+  indiv_cov <- matrix(nrow = nsim, ncol = p)
 
-  pb <- txtProgressBar(1, nboot, style=3)
+  pb <- txtProgressBar(1, nsim, style=3)
 
   ## p, beta, n
-  for (iter in 1:nboot) {
+  for (iter in 1:nsim) {
 
-    res <- eb_boot(beta = beta, p = p, b = b, n = n, niter = niter, type = type)
+    res <- eb_boot(beta = beta, p = p, b = b, n = n, nboot = nboot, type = type, debias = debias)
 
     lower_int <- apply(res[["lower"]], 2, mean)
     upper_int <- apply(res[["upper"]], 2, mean)
