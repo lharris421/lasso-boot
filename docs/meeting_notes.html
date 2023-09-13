@@ -1667,6 +1667,9 @@ border-radius: 0px;
   <a href="bayes_simple.html">Comparing Bayes Bootstrap Methods</a>
 </li>
 <li>
+  <a href="bayes_simple_cv_once.html">CV Once</a>
+</li>
+<li>
   <a href="meeting_notes.html">Meeting Notes</a>
 </li>
       </ul>
@@ -1694,172 +1697,89 @@ border-radius: 0px;
 </div>
 
 
+<ul>
+<li>For weekly meeting notes, try to just give a high level overview of
+things to discuss before, then update it with any other ideas after</li>
+</ul>
 <div id="running-to-do" class="section level1">
 <h1>Running To-Do</h1>
-<p>I need to add dates to this to do list, and maybe format it so it is
-cleaner… maybe a data table?</p>
+<ul class="task-list">
+<li><input type="checkbox"></input>Look into faster versions of integration
+for univariate (grid, Guass Hermite, Huber loss)</li>
+<li><input type="checkbox"></input>Implement method where bootstrap is also
+used to select lambda</li>
+<li><input type="checkbox"></input>Figure out AWS bucket sharing
+<ul class="task-list">
+<li><input type="checkbox" checked></input>Read: <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-walkthroughs-managing-access-example2.html" class="uri">https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-walkthroughs-managing-access-example2.html</a>
+<ul class="task-list">
+<li><input type="checkbox"></input>Check if Patrick is admin, if not… may not
+work -&gt; may just need to specify root instead?</li>
+</ul></li>
+<li><input type="checkbox" checked></input>Read UIowa startup guide to get
+a better idea of what the account setup is structured as
 <ul>
-<li><input type="checkbox" checked></input>Derive normal approximation
-using taylor series expansion as comparison</li>
-<li><input type="checkbox" checked></input>Look at SCAD (or other paper)
-for example of way to rewrite the likelihood in a way that may be faster
-to integrate over</li>
-<li><input type="checkbox" checked></input>Try implementing</li>
-<li><input type="checkbox"></input>Revisit to figure out what is causing
-errors</li>
-<li><input type="checkbox" checked></input>Consider the speed at which the
-bootstrap works when considering other methods</li>
-<li><input type="checkbox"></input>Read paper mentioned about gaussian
-mirrors</li>
-<li><input type="checkbox"></input>Look at univariate example when Beta is
+<li>Issue may be I am using version 2, not version 1 of command line
+tools</li>
+</ul></li>
+</ul></li>
+<li><input type="checkbox"></input>Combine two sets of functions together
+(clean up)</li>
+<li><input type="checkbox"></input>Read Gaussian Mirrors paper: <a href="https://doi.org/10.1080/01621459.2021.1923510" class="uri">https://doi.org/10.1080/01621459.2021.1923510</a></li>
+<li><input type="checkbox"></input>Look at Univariate example when Beta is
 very small, say, beta = .01</li>
 <li><input type="checkbox"></input>Profile code to see what is expensive in
-the bayesian bootstrap</li>
-<li><input type="checkbox" checked></input>Update code with normalization
-constant on the log scale</li>
+the Bayesian bootstrap</li>
 <li><input type="checkbox"></input>Find a way to cleanly present the plots,
 maybe make ggplotly instead?</li>
-<li><input type="checkbox"></input>Look into variational bayes (again) for
+<li><input type="checkbox"></input>Look into variational Bayes (again) for
 lasso, or generally if someone has tried to approximate the lasso
-posterior (numerically or annalytically)</li>
-<li><input type="checkbox"></input>Create mre for “Error: Supplied lambda
-value(s) are outside the range of the model fit.”</li>
-<li><input type="checkbox" checked></input>Look into bridge sampling
+posterior (numerically or analytically)</li>
+<li><input type="checkbox" checked></input>Create mre for “Error: Supplied
+lambda value(s) are outside the range of the model fit.”
 <ul>
-<li>Seems more like a method to compute the marginal likelihood which
-doesn’t seem directly relevant for the current context since we really
-need to get directly at the posterior</li>
+<li>In process of creating realized the mistakes I was making</li>
 </ul></li>
-<li><input type="checkbox" checked></input>Work on simple versions first
-before trying to extend it to more complex cases.
-<ul class="task-list">
-<li><input type="checkbox" checked></input>Need to test current on simpler
-version</li>
-</ul></li>
-<li><input type="checkbox" checked></input>Look at visualizing the prior /
-posterior (Do with original interval finding method)</li>
-<li><input type="checkbox" checked></input>Consider integrating from
-posterior mode (lasso solution)</li>
-<li>This turned out to be not great when skewed</li>
 <li><input type="checkbox" checked></input>Move denominator into log to see
 if that would help
 <ul>
 <li>Didn’t have an noticeable improvement</li>
 </ul></li>
-<li><input type="checkbox" checked></input>Clean up three methods of
-interval finding
+<li><input type="checkbox"></input>Consider HPD method of interval finding
+-&gt; likely too computationally demanding</li>
+</ul>
+</div>
+<div id="week-of-monday-september-11th-2023" class="section level1">
+<h1>Week of Monday, September 11th, 2023</h1>
 <ul>
-<li>Done for now, will stick with simpler of the three and in the future
-look back at the hpd method</li>
+<li>Running into issues when applied to real data:
+<ul>
+<li>NAs occur when the bootstrap sample ends up with columns that are
+nonsingular (I just skip over them for now)</li>
 </ul></li>
-<li><input type="checkbox" checked></input>Create “non-normalized” versions
-of plots
+<li>MRE findings
 <ul>
-<li>Doesn’t seem viable as this causes plots to essentially be
-meaningless</li>
+<li>I just had to heavily guide the lambda sequence</li>
 </ul></li>
+<li>CV first and once (seems promising)</li>
 </ul>
 </div>
-<div id="week-of-monday-september-4th-2023" class="section level1">
-<h1>Week of Monday, September 4th, 2023</h1>
-<ul>
-<li>SNR not working as expected?</li>
-</ul>
-</div>
-<div id="august-16th-2023" class="section level1">
-<h1>August 16th, 2023</h1>
-<div id="to-discuss" class="section level2">
-<h2>To Discuss</h2>
-<ul>
-<li>Worked on updating the interval finding function to be more stable
-but continued running into issues. I really think this stems back to
-instability in computing the proportionality constant. I have made some
-progress and currently believe that as long as I can find a constant
-such that I am then able to compute a non-zero / non-infinite value for
-the density at the posterior mode that this method should work.</li>
-<li>I looked down the path of “Determining Bayes Normalizing Constant”
-but aside from instability in the estimation of this quantity, I think
-there is just an issue in general with it being so small. I’m not sure
-any method I develop that requires a similar approach will be fruitful.
-Which is why I believe my approach alluded to in the first point is
-necessary first.</li>
-<li>I also saw issues arising from skewed posteriors which make finding
-density from the posterior mode potentially have issues, but these could
-also stem back to the earlier point made. I think this method would be
-potentially the most stable option but everything relies heavily on
-computing that normalizing constant.
-<ul>
-<li>I also worked on a method to find the HPD, but again, it is little
-use with methods with the normalizing constant issue. However, given
-recent discoveries I want to revisit this in the future.</li>
-</ul></li>
-<li>I read “Analytic solution and stationary phase approximation for the
-Bayesian lasso and elastic net.” This honestly fits perfectly into what
-we would need except for the fact that it does not work for lasso when
-the design matrix is rank deficient. This also concerns me because the
-paper is not too old (late 2018) suggesting to me that other analytic
-solutions (i.e. variational Bayes) may not exist for the lasso.</li>
-<li>Potential papers for variational Bayes:
-<ul>
-<li>Variational Full Bayes Lasso: Knots Selection in Regression Splines
-(<a href="https://arxiv.org/pdf/2102.13548v1.pdf" class="uri">https://arxiv.org/pdf/2102.13548v1.pdf</a>)</li>
-</ul></li>
-</ul>
-</div>
-<div id="action-items" class="section level2">
-<h2>Action Items</h2>
-<ul>
-<li>Derive normal approximation through taylor series expansion as
-comparison</li>
-<li>Look at SCAD (or other paper) for example of way to rewrite the
-likelihood in a way that may be faster to integrate over</li>
-<li>Try implimenting</li>
-<li>Consider the speed at which the bootstrap works when considering
-other methods</li>
-<li>Read paper mentioned about gaussian mirrors (ask patrick if can’t
-find)</li>
-<li>Look at univariate example when Beta is very small, say, beta =
-.01</li>
-<li>Profile code to see what is expensive</li>
-</ul>
-</div>
-</div>
-<div id="july-26th-2023" class="section level1">
-<h1>July 26th, 2023</h1>
-<div id="to-discuss-1" class="section level2">
-<h2>To Discuss</h2>
-<ul>
-<li>Initial results from “Simple Empirical Bayes Bootstrapped Confidence
-Intervals”
-<ul>
-<li>The results look bizarre, particularly for variables with zero as
-the true coefficient.</li>
-</ul></li>
-<li>Efficient Empirical Bayes Variable Selection and Estimation in
-Linear Models
-<ul>
-<li>The paper suggests a method in which under specific conditions the
-Lasso can be used as a computational short cut for model selection /
-estimation using a specific hierarchical prior for a linear model. With
-this, the authors also propose a way to select lambda and estimate <span class="math inline">\(\sigma^2\)</span> (and hence obtaining the final
-model as the lasso solution).</li>
-</ul></li>
-<li>Would we like to set up a drop box to store data objects?</li>
-</ul>
-</div>
-<div id="notes" class="section level2">
-<h2>Notes</h2>
-<ul>
-<li>Need to do a better job at taking notes during meeting</li>
-</ul>
-</div>
-<div id="action-items-1" class="section level2">
-<h2>Action Items</h2>
-<ul>
-<li>See to do above. Need to do better next time separating general
-discussion notes and what I need to work on going forward.</li>
-</ul>
-</div>
+<div id="general-notes" class="section level1">
+<h1>General notes</h1>
+<p><strong>U - shape coverage</strong>: The reasoning for this seems to
+be that with a true value of zero, coverage is high as the penalization
+draws the estimates towards zero. For coefficients with small true
+values, they are susceptible to also being shrunk entirely to zero and
+they are effected by shrinkage in general. Although coefficients that
+are truly large also suffer from shrinkage, they are less likely to be
+drawn entirely to zero which is why we seem somewhat of a stabilization
+effect in the coverage.</p>
+<p><strong>Bridge sampling</strong>: Seems more like a method to compute
+the marginal likelihood which doesn’t seem directly relevant for the
+current context since we really need to get directly at the
+posterior.</p>
+<p><strong>Integrating from posterior mode</strong>: Integrating from
+the posterior mode (the lasso solution) turned out to be not great when
+skewed</p>
 </div>
 
 

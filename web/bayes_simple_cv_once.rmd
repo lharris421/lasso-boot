@@ -1,0 +1,572 @@
+---
+title: "Comparing Bayesian Methods"
+runtime: shiny
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, child = 'web/_include/setup.rmd'}
+```
+
+
+```{r}
+source("./R/bayes_functions_fast.R")
+
+library(TeachingDemos)
+my_seed <- char2seed("Logan M. Harris")
+```
+
+# One Covariate
+
+## Beta = 0
+
+### Single Interval
+
+#### Original
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "original")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Univariate
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Normal
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "normal")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Cadillac
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "cadillac")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+### Coverage
+
+#### Original
+
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "original")
+save(res, file = "./web/data/bayes_simple/beta0_original_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta0_original_cv1.rds")
+mean(res$overall_cov)
+```
+
+#### Univariate
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
+save(res, file = "./web/data/bayes_simple/beta0_univariate_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta0_univariate.rds")
+mean(res$overall_cov)
+```
+
+#### Normal
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "normal")
+save(res, file = "./web/data/bayes_simple/beta0_normal_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta0_normal_cv1.rds")
+mean(res$overall_cov)
+```
+
+#### Cadillac
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "cadillac")
+save(res, file = "./web/data/bayes_simple/beta0_cadillac_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta0_cadillac.rds")
+mean(res$overall_cov)
+```
+
+## Beta = 3
+
+### Single Interval
+
+#### Original
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "original")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Univariate
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+
+#### Normal
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "normal")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+#### Cadillac
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "cadillac")
+print("Mean: ")
+print(c(mean(tmp$lower), mean(tmp$upper)))
+print("Median: ")
+print(c(median(tmp$lower), median(tmp$upper)))
+toc()
+```
+
+### Coverage
+
+#### Original
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "original")
+save(res, file = "./web/data/bayes_simple/beta3_original_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta3_original_cv1.rds")
+mean(res$overall_cov)
+```
+
+#### Univariate
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
+save(res, file = "./web/data/bayes_simple/beta3_univariate_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta3_univariate.rds")
+mean(res$overall_cov)
+```
+
+#### Normal
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "normal")
+save(res, file = "./web/data/bayes_simple/beta3_normal_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta3_normal_cv1.rds")
+mean(res$overall_cov)
+```
+
+#### Cadillac
+
+```{r, eval=FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "cadillac")
+save(res, file = "./web/data/bayes_simple/beta3_cadillac_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/beta3_cadillac_cv1.rds")
+mean(res$overall_cov)
+```
+
+# Many Covariates
+
+## p = 60, n = 100
+
+### Single Example
+
+#### Original
+
+```{r}
+set.seed(my_seed)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original")
+toc()
+plot_boot(tmp)
+```
+
+#### Univariate
+
+```{r}
+set.seed(my_seed)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate")
+toc()
+plot_boot(tmp)
+```
+
+#### Normal
+
+```{r}
+set.seed(my_seed)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "normal")
+toc()
+plot_boot(tmp)
+```
+
+#### Cadillac
+
+```{r}
+set.seed(my_seed)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "cadillac")
+toc()
+plot_boot(tmp)
+```
+
+### Coverage
+
+#### Original
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original")
+save(res, file = "./web/data/bayes_simple/many_original_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_original_cv1.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+#### Univariate
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate")
+save(res, file = "./web/data/bayes_simple/many_univariate_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_univariate_cv1.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+#### Normal
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "normal")
+save(res, file = "./web/data/bayes_simple/many_normal_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_normal_cv1.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+#### Cadillac
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "cadillac")
+save(res, file = "./web/data/bayes_simple/many_cadillac_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_cadillac_cv1.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+# Speed of Normal
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 60, n = 100, nboot = 100, type = "normal")
+toc()
+```
+
+```{r}
+tic()
+set.seed(my_seed)
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 600, n = 100, nboot = 100, type = "normal")
+toc()
+```
+
+# Debiasing?
+
+- Normal is still trash 
+
+## Univariate
+
+### n > p
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate", debias = TRUE)
+save(res, file = "./web/data/bayes_simple/many_univariate_debias_cv1.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_univariate_debias_cv1.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+## Normal
+
+### Single
+
+```{r}
+set.seed(my_seed)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "normal", debias = TRUE)
+toc()
+plot_boot(tmp)
+```
+
+### n > p
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "normal", debias = TRUE)
+save(res, file = "./web/data/bayes_simple/many_normal_debias_cv1_nep.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_normal_debias_cv1_nep.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+## Cadillac
+
+```{r}
+set.seed(my_seed)
+tic()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "cadillac", debias = TRUE)
+toc()
+plot_boot(tmp)
+```
+
+### n > p
+
+```{r, eval = FALSE}
+set.seed(my_seed)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "cadillac", debias = TRUE)
+save(res, file = "./web/data/bayes_simple/many_cadillac_debias_cv1_nep.rds")
+```
+
+```{r, echo=FALSE}
+load("./web/data/bayes_simple/many_cadillac_debias_cv1_nep.rds")
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+# Real Data
+
+## Rhee2006
+
+```{r}
+dat <- readData(Rhee2006)
+dup <- duplicated(t(dat$X))
+const <- apply(dat$X, 2, function(x) length(unique(x)) == 1)
+dat$X <- dat$X[,!dup & !const]
+
+set.seed(my_seed)
+tic()
+rhee <- eb_boot(dat = dat, type = "univariate", nboot = 200)
+toc()
+```
+
+```{r}
+plot_boot(rhee, n = 60)
+```
+
+```{r}
+lowers <- apply(rhee[["lower"]], 2, mean, na.rm = TRUE)
+uppers <- apply(rhee[["upper"]], 2, mean, na.rm = TRUE)
+sum(sign(lowers) * sign(uppers) == 1)
+```
+
+## pollution
+
+```{r}
+dat <- readData(pollution)
+dat$X <- ncvreg::std(dat$X)
+set.seed(my_seed)
+tic()
+pollution <- eb_boot(dat = dat, type = "univariate")
+toc()
+```
+
+```{r}
+plot_boot(pollution)
+```
+
+## whoari
+
+```{r}
+dat <- readData(whoari)
+dat$X <- ncvreg::std(dat$X)
+set.seed(my_seed)
+tic()
+whoari <- eb_boot(dat = dat, type = "univariate")
+toc()
+```
+
+```{r}
+plot_boot(whoari, n = 66)
+```
