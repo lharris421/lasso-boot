@@ -162,17 +162,18 @@ plot_boot <- function(eb_boot, n = 30) {
     labs(y = "Variable", x = "Estimate")
 }
 
-dens <- function(x, z, lambda, sigma2, normalizer = 1, multiplier = 1) {
+dens <- function(x, z, lambda, sigma2, n, normalizer = 1, multiplier = 1) {
 
-  return(((exp((-.5/sigma2)*(z - x)^2) / exp(lambda*abs(x))) / multiplier) / normalizer)
+  return(((exp(-(n/sigma2)*(.5*(x - z)^2 + lambda*abs(x)))) / multiplier) / normalizer)
 
 }
 
-obj_simp <- function(beta, p, z, lambda, sigma2, normalizer, multiplier, lwr) {
+obj_simp <- function(beta, p, z, lambda, sigma2, n, normalizer, multiplier, lwr) {
 
   prob <- integrate(
     dens, lower = lwr, upper = beta,
-    z = z, lambda = lambda, sigma2 = sigma2, multiplier = multiplier, normalizer = normalizer
+    z = z, lambda = lambda, sigma2 = sigma2, n = n,
+    multiplier = multiplier, normalizer = normalizer
   )$value
 
   return(p - prob)
@@ -184,21 +185,34 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
   nlambda <- 100
 
   if (is.null(dat)) {
+
     dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n, sgm = sgm)
+
+    X <- dat$X
+    y <- dat$y
+    p <- ncol(X)
+
+    cv_res <- cv.ncvreg(X, y, penalty = "lasso")
+    sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
+    lam <- cv_res$lambda.min
+    rate <- (lam*n / sigma2)
+
     tbeta <- dat$beta
+
+  } else {
+
+    X <- dat$X
+    y <- dat$y
+    p <- ncol(X)
+
+    cv_res <- cv.ncvreg(X, y, penalty = "lasso")
+    sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
+    lam <- cv_res$lambda.min
+    rate <- (lam*n / sigma2)
+
+    tbeta <- coef(cv_res$fit, lambda = lam)[-1]
+
   }
-
-  X <- dat$X
-  y <- dat$y
-  p <- ncol(X)
-
-  cv_res <- cv.ncvreg(X, y, penalty = "lasso")
-  sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
-  lam <- cv_res$lambda.min
-  if (!is.null(dat)) {tbeta <- coef(cv_res$fit, lambda = lam)[-1]}
-  rate <- (lam*n / sigma2)
-
-  if (type == "univariate") sigma2 <- sigma2 / length(ynew)
 
   lowers <- matrix(nrow = nboot, ncol = p)
   uppers <- matrix(nrow = nboot, ncol = p)
@@ -213,7 +227,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
     xnew <- ncvreg::std(xnew)
 
     lambda_max <- max(apply(xnew, 2, find_thresh, ynew))
-    lambda_min <- lam - lam/100 ## set min to be slightly smaller
+    lambda_min <- lam - lam / 100 ## set min to be slightly smaller
     if (lambda_min > lambda_max | lam > lambda_max) {
       lambda_max <- lam + lam / 100
       nlambda <- 2
@@ -238,17 +252,19 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
         z <- (1/length(partial_residuals))*as.numeric(t(xvar) %*% partial_residuals)
 
         multiplier <- dens(
-          x = post_mode, z = z, lambda = lam, sigma2 = sigma2
+          x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
         )
 
         denom <- integrate(
           dens, lower = -Inf, upper = Inf,
-          z = z, lambda = lam, sigma2 = sigma2, multiplier = multiplier
+          z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
+          multiplier = multiplier
         )$value
 
 
         ymode <- dens(
-          x = post_mode, z = z, lambda = lam, sigma2 = sigma2, normalizer = denom, multiplier = multiplier
+          x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
+          normalizer = denom, multiplier = multiplier
         )
 
         step <- 1
@@ -257,7 +273,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
 
           xvals <- post_mode + c(-1, 1)*curr
           yvals <- dens(
-            x = xvals, z = z, lambda = lam, sigma2 = sigma2,
+            x = xvals, z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
             normalizer = denom, multiplier = multiplier
           )
 
@@ -270,24 +286,22 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
 
         denom <- integrate(
           dens, lower = post_mode - curr, upper = post_mode + curr,
-          z = z, lambda = lam, sigma2 = sigma2, multiplier = multiplier
+          z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
+          multiplier = multiplier
         )$value
 
         lower <- uniroot(
           obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
-          z = z, lambda = lam, sigma2 = sigma2, normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
+          z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
+          normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
         )$root
         upper <- uniroot(
           obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
-          z = z, lambda = lam, sigma2 = sigma2, normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
+          z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
+          normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
         )$root
 
         bounds <- (c(lower, upper) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
-
-        # if (!is.finite(bounds[1]) | !is.finite(bounds[2]) | is.na(bounds[1]) | is.na(bounds[2])) {
-        #   print(paste0("z: ", z, " lam: ", lam, " sigma2: ", sigma2, " normalizer: ", denom, " multiplier: ", multiplier, " lower: ", lwr))
-        # }
-
 
       } else if (type == "original") {
 
@@ -296,8 +310,6 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
       } else if (type == "normal") {
 
         n <- length(ynew)
-        # score <- (1/sigma2)*(t(partial_residuals) %*% xvar - post_mode*(t(xvar) %*% xvar + ((n^2*lam^2) / (2*sigma2))))
-        # norm_mean <- post_mode - (information_inv * score)
         norm_mean <- (2*sigma2*t(xvar) %*% partial_residuals) * (2*sigma2*t(xvar) %*% xvar + n^2*lam^2)^(-1)
         norm_var <- (2*sigma2^2) / (2*(t(xvar) %*% xvar)*sigma2 + n^2*lam^2)
         bounds <- (qnorm(c(.1, .9), norm_mean, sqrt(norm_var)) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
