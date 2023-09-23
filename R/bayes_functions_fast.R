@@ -180,24 +180,30 @@ obj_simp <- function(beta, p, z, lambda, sigma2, n, normalizer, multiplier, lwr)
 
 }
 
-eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original", prog = FALSE, sgm = 1, debias = FALSE, dat = NULL) {
+eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original", prog = FALSE, sgm = 1, debias = FALSE, dat = NULL, time = FALSE) {
 
+  if (time) tic(msg = "Overall")
   nlambda <- 100
 
   if (is.null(dat)) {
 
+    if (time) tic(msg = "Generate data")
     dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n, sgm = sgm)
 
     X <- dat$X
     y <- dat$y
     p <- ncol(X)
+    if (time) toc()
 
+    if (time) tic(msg = "Cross Validation")
     cv_res <- cv.ncvreg(X, y, penalty = "lasso")
     sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
     lam <- cv_res$lambda.min
     rate <- (lam*n / sigma2)
+    if (time) toc()
 
     tbeta <- dat$beta
+
 
   } else {
 
@@ -205,21 +211,23 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
     y <- dat$y
     p <- ncol(X)
 
+    if (time) tic(msg = "Cross Validation")
     cv_res <- cv.ncvreg(X, y, penalty = "lasso")
     sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
     lam <- cv_res$lambda.min
     rate <- (lam*n / sigma2)
+    if (time) toc()
 
     tbeta <- coef(cv_res$fit, lambda = lam)[-1]
 
   }
 
   lowers <- matrix(nrow = nboot, ncol = p)
-  tmp_lower <- matrix(nrow = nboot, ncol = p)
   uppers <- matrix(nrow = nboot, ncol = p)
 
   if (prog) pb <- txtProgressBar(1, nboot, style=3)
 
+  if (time) tic(msg = "Bootstrapping")
   for (i in 1:nboot) {
 
     idx_new <- sample(1:length(y), replace = TRUE)
@@ -237,6 +245,49 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
 
     lasso_fit <- ncvreg(xnew, ynew, penalty = "lasso", lambda = lambda_seq)
     coefs <- coef(lasso_fit, lambda = lam)
+
+    ## Try and do without for loop
+    if (type == "univariate") {
+
+      xnew_ns <- xnew[,attr(xnew, "nonsingular") == 1:ncol(xnew)]
+      post_modes <- coefs[-1][attr(xnew, "nonsingular") == 1:ncol(xnew)]
+
+      sub <- t(t(xnew_ns) * post_modes)
+      xb <- (xnew_ns %*% as.matrix(post_modes, ncol = 1))
+      xb <- - sub + as.numeric(xb)
+
+      partial_residuals <- (ynew - coefs[1]) - xb
+      len <- nrow(partial_residuals)
+
+      # z <- (1/len)*diag(t(xnew_ns) %*% partial_residuals)
+      # R <-  (1/len)*diag(t(partial_residuals) %*% partial_residuals)
+      z <- (1/len)*colSums(xnew_ns * partial_residuals)
+      R <-  (1/len)*colSums(partial_residuals * partial_residuals)
+
+      obs_lw <- pnorm(0, z + lam, sqrt(sigma2 / n))
+      obs_up <- pnorm(0, z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+
+      # p1 <- sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2))
+      # p3 <- (sqrt(2*pi*(sigma2/n)))
+      # lwr <- obs_lw*p1* exp(-(n/(2*sigma2))*((R) - (z + lam)^2))*p3
+      # upr <- obs_up*p1* exp(-(n/(2*sigma2))*((R) - (z - lam)^2))*p3
+      # tdens <- p1*p3*(obs_lw* exp(-(n/(2*sigma2))*((R) - (z + lam)^2)) + obs_up* exp(-(n/(2*sigma2))*((R) - (z - lam)^2)))
+
+      lwr <- obs_lw*exp(-(n/(2*sigma2))*((R) - (z + lam)^2))
+      upr <- obs_up*exp(-(n/(2*sigma2))*((R) - (z - lam)^2))
+      tdens <- lwr + upr
+
+      prop_lw <- lwr  / tdens
+      prop_up <- upr / tdens
+
+      lower <- ifelse(prop_lw >= .1, qnorm(.1 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n)), qnorm(.9 * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE))
+      upper <- ifelse(prop_lw >= .9, qnorm(.9 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n)), qnorm(.1 * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE))
+
+      rescale <- (attr(xnew, "scale")[attr(xnew, "nonsingular") == 1:ncol(xnew)])^(-1)
+      lowers[i,] <- lower * rescale
+      uppers[i,] <- upper * rescale
+
+    } else {
 
     ## Beta specific
     for (j in attr(xnew, "nonsingular")) {
@@ -264,75 +315,19 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
 
         max_lower <- ((pnorm(0, z + lam, sqrt(sigma2 / n)) / obs_lw) * prop_lw)
 
-        tmp <- qnorm(.1 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n))
-
-        multiplier <- dens(
-          x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-        )
-
-        denom <- integrate(
-          dens, lower = -Inf, upper = Inf,
-          z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-          multiplier = multiplier
-        )$value
-
-
-        ymode <- dens(
-          x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-          normalizer = denom, multiplier = multiplier
-        )
-
-        step <- 1
-        curr <- step
-        while (TRUE) {
-
-          xvals <- post_mode + c(-1, 1)*curr
-          yvals <- dens(
-            x = xvals, z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-            normalizer = denom, multiplier = multiplier
-          )
-
-          if (all(yvals < (ymode / 100))) {
-            break
-          } else {
-            curr <- curr + step
-          }
+        if (max_lower >= .1) {
+          lower <- qnorm(.1 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n))
+        } else {
+          lower <- qnorm(.9 * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
         }
 
-        # denom <- integrate(
-        #   dens, lower = post_mode - curr, upper = post_mode + curr,
-        #   z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-        #   multiplier = multiplier
-        # )$value
-        #
-        # lower <- uniroot(
-        #   obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
-        #   z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-        #   normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
-        # )$root
-        # upper <- uniroot(
-        #   obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
-        #   z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-        #   normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
-        # )$root
-
-        lower <- uniroot(
-          obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
-          z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-          normalizer = denom, multiplier = multiplier, lwr = -Inf
-        )$root
-        upper <- uniroot(
-          obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
-          z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-          normalizer = denom, multiplier = multiplier, lwr = -Inf
-        )$root
-
-        # print((prop_lw*obs))
-        # print(.1 / pnorm(lower, z - lam, sqrt(sigma2 / n)))
+        if (max_lower >= .9) {
+          upper <- qnorm(.9 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n))
+        } else {
+          upper <- qnorm(.1 * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+        }
 
         bounds <- (c(lower, upper) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
-        tmp_bound_lower <- tmp * (attr(xnew, "scale")[j])^(-1)
-        if (tmp_bound_lower > 0) print("Fix me!!!")
 
       } else if (type == "original") {
 
@@ -362,18 +357,18 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
         stop(paste0("Type: ", type, " not an option."))
 
       }
+    }
 
       uppers[i,j] <- bounds[2]
       lowers[i,j] <- bounds[1]
-      tmp_lower[i,j] <- tmp_bound_lower
 
     }
 
     if(prog) setTxtProgressBar(pb, i)
 
   }
-
-  print(mean(tmp_lower))
+  if (time) toc()
+  if (time) toc() ## Overall
   return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta))
 
 }

@@ -3,7 +3,7 @@ title: "Comparing Bayesian Methods"
 runtime: shiny
 output:
   html_document:
-    code_folding: hide
+    code_folding: show
 ---
 
 ```{r setup, child = 'web/_include/setup.rmd'}
@@ -26,27 +26,19 @@ my_seed <- char2seed("Logan M. Harris")
 #### Original
 
 ```{r}
-tic()
 set.seed(my_seed)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "original")
-print("Mean: ")
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "original", time = TRUE)
+
 print(c(mean(tmp$lower), mean(tmp$upper)))
-print("Median: ")
-print(c(median(tmp$lower), median(tmp$upper)))
-toc()
 ```
 
 #### Univariate
 
 ```{r}
-tic()
 set.seed(my_seed)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate")
-print("Mean: ")
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", time = TRUE)
+
 print(c(mean(tmp$lower), mean(tmp$upper)))
-print("Median: ")
-print(c(median(tmp$lower), median(tmp$upper)))
-toc()
 ```
 
 ### Coverage
@@ -57,6 +49,10 @@ toc()
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "original")
+mean(res$overall_cov)
+```
+
+```{r, echo=FALSE}
 save(res, file = "./web/data/bayes_simple/beta0_original_cv1.rds")
 ```
 
@@ -70,6 +66,10 @@ mean(res$overall_cov)
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
+mean(res$overall_cov)
+```
+
+```{r}
 save(res, file = "./web/data/bayes_simple/beta0_univariate_cv1.rds")
 ```
 
@@ -86,27 +86,19 @@ mean(res$overall_cov)
 #### Original
 
 ```{r}
-tic()
 set.seed(my_seed)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "original")
-print("Mean: ")
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "original", time = TRUE)
+
 print(c(mean(tmp$lower), mean(tmp$upper)))
-print("Median: ")
-print(c(median(tmp$lower), median(tmp$upper)))
-toc()
 ```
 
 #### Univariate
 
 ```{r}
-tic()
 set.seed(my_seed)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate")
-print("Mean: ")
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", time = TRUE)
+
 print(c(mean(tmp$lower), mean(tmp$upper)))
-print("Median: ")
-print(c(median(tmp$lower), median(tmp$upper)))
-toc()
 ```
 
 ### Coverage
@@ -116,6 +108,10 @@ toc()
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "original")
+mean(res$overall_cov)
+```
+
+```{r, echo=FALSE}
 save(res, file = "./web/data/bayes_simple/beta3_original_cv1.rds")
 ```
 
@@ -129,6 +125,10 @@ mean(res$overall_cov)
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
+mean(res$overall_cov)
+```
+
+```{r, echo=FALSE}
 save(res, file = "./web/data/bayes_simple/beta3_univariate_cv1.rds")
 ```
 
@@ -147,9 +147,7 @@ mean(res$overall_cov)
 
 ```{r}
 set.seed(my_seed)
-tic()
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original")
-toc()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original", time = TRUE)
 plot_boot(tmp)
 ```
 
@@ -157,9 +155,7 @@ plot_boot(tmp)
 
 ```{r}
 set.seed(my_seed)
-tic()
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate")
-toc()
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate", time = TRUE)
 plot_boot(tmp)
 ```
 
@@ -170,6 +166,9 @@ plot_boot(tmp)
 ```{r, eval = FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original")
+```
+
+```{r, echo=FALSE}
 save(res, file = "./web/data/bayes_simple/many_original_cv1.rds")
 ```
 
@@ -200,6 +199,10 @@ save(res, file = "./web/data/bayes_simple/many_univariate_cv1.rds")
 ```
 
 ```{r, echo=FALSE}
+save(res, file = "./web/data/bayes_simple/many_univariate_cv1.rds")
+```
+
+```{r, echo=FALSE}
 load("./web/data/bayes_simple/many_univariate_cv1.rds")
 ```
 
@@ -219,57 +222,36 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 
 # Speed of Univariate
 
-```{r}
-tic()
-set.seed(my_seed)
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 600, n = 100, nboot = 100, type = "univariate")
-toc()
-```
-
-# Debiasing?
-
-## Univariate
-
-### n > p
-
 ```{r, eval = FALSE}
 set.seed(my_seed)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate", debias = TRUE)
-save(res, file = "./web/data/bayes_simple/many_univariate_debias_cv1.rds")
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 6000, n = 100, nboot = 100, type = "normal", time = TRUE)
 ```
 
-```{r, echo=FALSE}
-load("./web/data/bayes_simple/many_univariate_debias_cv1.rds")
-```
-
-##### Overall Coverage (per bootstrap)
-
-```{r}
-mean(res$overall_cov)
-hist(res$overall_cov, xlab = "Coverage", main ="")
-```
-
-##### Individual Coverage (per covariate)
-
-```{r}
-tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
-```
+Generate data: 46.468 sec elapsed
+Cross Validation: 0.701 sec elapsed
+Bootstrapping: 1046.003 sec elapsed
+Overall: 1093.173 sec elapsed
 
 # Real Data
 
 ## Rhee2006
+
+### Pre-process data
+
+- Remove constant and perfectly colinear columns
 
 ```{r}
 dat <- readData(Rhee2006)
 dup <- duplicated(t(dat$X))
 const <- apply(dat$X, 2, function(x) length(unique(x)) == 1)
 dat$X <- dat$X[,!dup & !const]
+```
 
+### Perform Bootstrap
+
+```{r}
 set.seed(my_seed)
-tic()
-rhee <- eb_boot(dat = dat, type = "univariate", nboot = 200)
-toc()
+rhee <- eb_boot(dat = dat, type = "univariate", nboot = 200, time = TRUE)
 ```
 
 ```{r}
@@ -287,10 +269,9 @@ sum(sign(lowers) * sign(uppers) == 1)
 ```{r}
 dat <- readData(pollution)
 dat$X <- ncvreg::std(dat$X)
+
 set.seed(my_seed)
-tic()
-pollution <- eb_boot(dat = dat, type = "univariate")
-toc()
+pollution <- eb_boot(dat = dat, type = "univariate", time = TRUE)
 ```
 
 ```{r}
@@ -302,107 +283,19 @@ plot_boot(pollution)
 ```{r}
 dat <- readData(whoari)
 dat$X <- ncvreg::std(dat$X)
+
 set.seed(my_seed)
-tic()
-whoari <- eb_boot(dat = dat, type = "univariate")
-toc()
+whoari <- eb_boot(dat = dat, type = "univariate", time = TRUE)
 ```
 
 ```{r}
 plot_boot(whoari)
 ```
 
-# Grid explorations
-
-- What if we don't lose any constants?
 
 ```{r}
-z <- seq(-2, 2, by = .1)
-# n <- seq(10, 100, by = 5)
-n <- 100
-sigma2 <- 10
-lam <- seq(.1, 1, by = .1)
-# lam <- .5
+t(1:4 * t(matrix(1, nrow = 4, ncol = 4)))
 
-vals <- expand.grid(list(z, n, sigma2, lam)) %>%
-  data.frame()
-
-colnames(vals) <- c("z", "n", "sigma2", "lam")
-vals <- vals %>% dplyr::mutate(post_mode = z * (n / (n + 1)))
-
-diff <- function(z, n, sigma2, lam, post_mode) {
-  
-   multiplier <- dens(
-    x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = n,
-   )
-  
-  denom <- integrate(
-    dens, lower = -Inf, upper = Inf,
-    z = z, lambda = lam, sigma2 = sigma2, n = n,
-    multiplier = multiplier
-  )$value
-  
-  
-  ymode <- dens(
-    x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = n,
-    normalizer = denom, multiplier = multiplier
-  )
-  
-  step <- 1
-  curr <- step
-  while (TRUE) {
-  
-    xvals <- post_mode + c(-1, 1)*curr
-    yvals <- dens(
-      x = xvals, z = z, lambda = lam, sigma2 = sigma2, n = n,
-      normalizer = denom, multiplier = multiplier
-    )
-  
-    if (all(yvals < (ymode / 100))) {
-      break
-    } else {
-      curr <- curr + step
-    }
-  }
-  
-  lower <- uniroot(
-    obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
-    z = z, lambda = lam, sigma2 = sigma2, n = n,
-    normalizer = denom, multiplier = multiplier, lwr = -Inf
-  )$root
-  upper <- uniroot(
-    obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
-    z = z, lambda = lam, sigma2 = sigma2, n = n,
-    normalizer = denom, multiplier = multiplier, lwr = -Inf
-  )$root
-  
-  return(upper - lower) 
-}
-
-diffs <- mapply(diff, vals$z, vals$n, vals$sigma2, vals$lam, vals$post_mode)
-
-val_matrix <- bind_cols(vals, diffs)
-colnames(val_matrix)[6] <- "diff"
-
-
-val_matrix %>%
-  ## filter(lam == .5) %>%
-  ggplot(aes(x = z, y = lam, fill = diff)) +
-  geom_tile() 
-```
-
-```{r}
-z <- 1
-n <- 100
-sigma2 <- 10
-lam <- .5
-
-sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2)) * exp(-(n/(2*sigma2))*((R) - (z + lam)^2))
-
-sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2)) * exp(-(n/(2*sigma2))*((sigma2/n) - (z - lam)^2))
-
-pnorm(0, z - lam, sqrt(sigma2 / n))
-pnorm(0, z + lam, sqrt(sigma2 / n), lower.tail = FALSE)
-
+rep(1, 5) - t(1:4 * t(matrix(1, nrow = 5, ncol = 4))) 
 ```
 
