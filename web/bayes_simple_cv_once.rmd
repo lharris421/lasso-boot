@@ -222,13 +222,6 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 ```{r}
 tic()
 set.seed(my_seed)
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 60, n = 100, nboot = 100, type = "univariate")
-toc()
-```
-
-```{r}
-tic()
-set.seed(my_seed)
 tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 600, n = 100, nboot = 100, type = "univariate")
 toc()
 ```
@@ -324,8 +317,92 @@ plot_boot(whoari)
 - What if we don't lose any constants?
 
 ```{r}
-grid_obj <- function(x, p, n, sigma2, z_j, lambda) {
+z <- seq(-2, 2, by = .1)
+# n <- seq(10, 100, by = 5)
+n <- 100
+sigma2 <- 10
+lam <- seq(.1, 1, by = .1)
+# lam <- .5
+
+vals <- expand.grid(list(z, n, sigma2, lam)) %>%
+  data.frame()
+
+colnames(vals) <- c("z", "n", "sigma2", "lam")
+vals <- vals %>% dplyr::mutate(post_mode = z * (n / (n + 1)))
+
+diff <- function(z, n, sigma2, lam, post_mode) {
   
+   multiplier <- dens(
+    x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = n,
+   )
+  
+  denom <- integrate(
+    dens, lower = -Inf, upper = Inf,
+    z = z, lambda = lam, sigma2 = sigma2, n = n,
+    multiplier = multiplier
+  )$value
+  
+  
+  ymode <- dens(
+    x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = n,
+    normalizer = denom, multiplier = multiplier
+  )
+  
+  step <- 1
+  curr <- step
+  while (TRUE) {
+  
+    xvals <- post_mode + c(-1, 1)*curr
+    yvals <- dens(
+      x = xvals, z = z, lambda = lam, sigma2 = sigma2, n = n,
+      normalizer = denom, multiplier = multiplier
+    )
+  
+    if (all(yvals < (ymode / 100))) {
+      break
+    } else {
+      curr <- curr + step
+    }
+  }
+  
+  lower <- uniroot(
+    obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
+    z = z, lambda = lam, sigma2 = sigma2, n = n,
+    normalizer = denom, multiplier = multiplier, lwr = -Inf
+  )$root
+  upper <- uniroot(
+    obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
+    z = z, lambda = lam, sigma2 = sigma2, n = n,
+    normalizer = denom, multiplier = multiplier, lwr = -Inf
+  )$root
+  
+  return(upper - lower) 
 }
+
+diffs <- mapply(diff, vals$z, vals$n, vals$sigma2, vals$lam, vals$post_mode)
+
+val_matrix <- bind_cols(vals, diffs)
+colnames(val_matrix)[6] <- "diff"
+
+
+val_matrix %>%
+  ## filter(lam == .5) %>%
+  ggplot(aes(x = z, y = lam, fill = diff)) +
+  geom_tile() 
+```
+
+```{r}
+z <- 1
+n <- 100
+sigma2 <- 10
+lam <- .5
+
+sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2)) * exp(-(n/(2*sigma2))*((R) - (z + lam)^2))
+
+sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2)) * exp(-(n/(2*sigma2))*((sigma2/n) - (z - lam)^2))
+
+pnorm(0, z - lam, sqrt(sigma2 / n))
+pnorm(0, z + lam, sqrt(sigma2 / n), lower.tail = FALSE)
+
 ```
 

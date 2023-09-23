@@ -215,6 +215,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
   }
 
   lowers <- matrix(nrow = nboot, ncol = p)
+  tmp_lower <- matrix(nrow = nboot, ncol = p)
   uppers <- matrix(nrow = nboot, ncol = p)
 
   if (prog) pb <- txtProgressBar(1, nboot, style=3)
@@ -250,6 +251,20 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
       if (type == "univariate") {
 
         z <- (1/length(partial_residuals))*as.numeric(t(xvar) %*% partial_residuals)
+        R <-  (1/length(partial_residuals))*as.numeric(t(partial_residuals) %*% partial_residuals)
+
+        lwr2 <- pnorm(0, z + lam, sqrt(sigma2 / n))*sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2)) * exp(-(n/(2*sigma2))*((R) - (z + lam)^2))*(sqrt(2*pi*(sigma2/n)))
+        upr2 <- pnorm(0, z - lam, sqrt(sigma2 / n), lower.tail = FALSE)*sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2)) * exp(-(n/(2*sigma2))*((R) - (z - lam)^2))*(sqrt(2*pi*(sigma2/n)))
+
+        tdens <- lwr2 + upr2
+        prop_lw <- lwr2  / tdens
+        prop_up <- upr2  / tdens
+        obs_lw <- pnorm(0, z + lam, sqrt(sigma2 / n))
+        obs_up <- pnorm(0, z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+
+        max_lower <- ((pnorm(0, z + lam, sqrt(sigma2 / n)) / obs_lw) * prop_lw)
+
+        tmp <- qnorm(.1 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n))
 
         multiplier <- dens(
           x = post_mode, z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
@@ -284,24 +299,40 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
           }
         }
 
-        denom <- integrate(
-          dens, lower = post_mode - curr, upper = post_mode + curr,
-          z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-          multiplier = multiplier
-        )$value
+        # denom <- integrate(
+        #   dens, lower = post_mode - curr, upper = post_mode + curr,
+        #   z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
+        #   multiplier = multiplier
+        # )$value
+        #
+        # lower <- uniroot(
+        #   obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
+        #   z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
+        #   normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
+        # )$root
+        # upper <- uniroot(
+        #   obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
+        #   z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
+        #   normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
+        # )$root
 
         lower <- uniroot(
           obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
           z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-          normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
+          normalizer = denom, multiplier = multiplier, lwr = -Inf
         )$root
         upper <- uniroot(
           obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
           z = z, lambda = lam, sigma2 = sigma2, n = length(partial_residuals),
-          normalizer = denom, multiplier = multiplier, lwr = post_mode - curr
+          normalizer = denom, multiplier = multiplier, lwr = -Inf
         )$root
 
+        # print((prop_lw*obs))
+        # print(.1 / pnorm(lower, z - lam, sqrt(sigma2 / n)))
+
         bounds <- (c(lower, upper) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
+        tmp_bound_lower <- tmp * (attr(xnew, "scale")[j])^(-1)
+        if (tmp_bound_lower > 0) print("Fix me!!!")
 
       } else if (type == "original") {
 
@@ -334,6 +365,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
 
       uppers[i,j] <- bounds[2]
       lowers[i,j] <- bounds[1]
+      tmp_lower[i,j] <- tmp_bound_lower
 
     }
 
@@ -341,6 +373,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
 
   }
 
+  print(mean(tmp_lower))
   return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta))
 
 }
