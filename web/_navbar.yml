@@ -1,8 +1,8 @@
 title: "Dissertation Work"
 left:
-  - text: "Comparing Bayes Bootstrap Methods"
-    href: bayes_simple.html
-  - text: "CV Once"
-    href: bayes_simple_cv_once.html
+  - text: "EB Bootstrap Methods"
+    href: emperical_bayes.html
+  - text: "EB Bootstrap Methods - CV Once"
+    href: emperical_bayes_cv_once.html
   - text: "Meeting Notes"
     href: meeting_notes.html

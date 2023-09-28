@@ -9,24 +9,32 @@ output:
 
 # Running To-Do
 
-- [ ] Look into faster versions of integration for univariate (grid, Guass Hermite, Huber loss)
 - [ ] Implement method where bootstrap is also used to select lambda
 - [ ] Figure out AWS bucket sharing
   - [x] Read: https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-walkthroughs-managing-access-example2.html
-    - [ ] Check if Patrick is admin, if not... may not work -> may just need to specify root instead?
+    - [x] Check if Patrick is admin, if not... may not work -> may just need to specify root instead?
   - [x] Read UIowa startup guide to get a better idea of what the account setup is structured as
     - Issue may be I am using version 2, not version 1 of command line tools
-- [ ] Combine two sets of functions together (clean up)
+  - [ ] Reach out to Patrick's contact in IT?
+  - [ ] json bucket policy generating function
 - [ ] Read Gaussian Mirrors paper: https://doi.org/10.1080/01621459.2021.1923510
 - [ ] Look at Univariate example when Beta is very small, say, beta = .01
-- [ ] Profile code to see what is expensive in the Bayesian bootstrap
-- [ ] Find a way to cleanly present the plots, maybe make ggplotly instead?
-- [ ] Look into variational Bayes (again) for lasso, or generally if someone has tried to approximate the lasso posterior (numerically or analytically)
+- [ ] Consider HPD method of interval finding
+- [ ] Speed up GenDataABN
+- [ ] Add a global .gitignore
+- [ ] Make better method names
+- [x] Look into faster versions of integration for univariate (grid, Guass Hermite, Huber loss)
+ - Grid didn't seem viable, but I have a fast solution now anyway
+- [x] Combine two sets of functions together (clean up)
+- [x] Profile code to see what is expensive in the Bayesian bootstrap
 - [x] Create mre for "Error: Supplied lambda value(s) are outside the range of the model fit."
   - In process of creating realized the mistakes I was making
-- [x] Move denominator into log to see if that would help
-  - Didn't have an noticeable improvement
-- [ ] Consider HPD method of interval finding -> likely too computationally demanding
+
+# Week of Monday, September 25th
+
+- I continue to have difficulty with AWS Login with V2
+- I did figure out issue was having with "univariate" version, but now is superceeded
+- Found that the marginal posterior is just a mixture of truncated normals
 
 # Week of Monday, September 11th, 2023
 
@@ -35,7 +43,6 @@ output:
 - MRE findings
   - I just had to heavily guide the lambda sequence
 - CV first and once (seems promising)
-
 
 # General notes
 

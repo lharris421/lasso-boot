@@ -1,5 +1,5 @@
 ---
-title: "Comparing Bayesian Methods"
+title: "EB Bootstrap Methods"
 runtime: shiny
 output:
   html_document:
@@ -33,7 +33,7 @@ This now focuses on:
 ```{r}
 tic()
 set.seed(my_seed)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "original")
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "original", lambda = "cv_every")
 print("Mean: ")
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")
@@ -46,7 +46,7 @@ toc()
 ```{r}
 tic()
 set.seed(my_seed)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate")
+tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", lambda = "cv_every")
 print("Mean: ")
 print(c(mean(tmp$lower), mean(tmp$upper)))
 print("Median: ")

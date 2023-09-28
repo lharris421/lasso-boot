@@ -1,6 +1,5 @@
 ---
-title: "Comparing Bayesian Methods"
-runtime: shiny
+title: "EB Bootstrap Methods - CV Once"
 output:
   html_document:
     code_folding: show
@@ -11,7 +10,7 @@ output:
 
 
 ```{r}
-source("./R/bayes_functions_fast.R")
+source("./R/bayes_functions.R")
 
 library(TeachingDemos)
 my_seed <- char2seed("Logan M. Harris")
@@ -29,7 +28,7 @@ my_seed <- char2seed("Logan M. Harris")
 set.seed(my_seed)
 tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "original", time = TRUE)
 
-print(c(mean(tmp$lower), mean(tmp$upper)))
+int_b0_O <- c(mean(tmp$lower), mean(tmp$upper))
 ```
 
 #### Univariate
@@ -38,7 +37,7 @@ print(c(mean(tmp$lower), mean(tmp$upper)))
 set.seed(my_seed)
 tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", time = TRUE)
 
-print(c(mean(tmp$lower), mean(tmp$upper)))
+int_b0_U <- c(mean(tmp$lower), mean(tmp$upper))
 ```
 
 ### Coverage
@@ -49,7 +48,7 @@ print(c(mean(tmp$lower), mean(tmp$upper)))
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "original")
-mean(res$overall_cov)
+cov_b0_O <- mean(res$overall_cov)
 ```
 
 ```{r, echo=FALSE}
@@ -58,7 +57,7 @@ save(res, file = "./web/data/bayes_simple/beta0_original_cv1.rds")
 
 ```{r, echo=FALSE}
 load("./web/data/bayes_simple/beta0_original_cv1.rds")
-mean(res$overall_cov)
+cov_b0_O <- mean(res$overall_cov)
 ```
 
 #### Univariate
@@ -66,18 +65,25 @@ mean(res$overall_cov)
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
-mean(res$overall_cov)
+cov_b0_U <- mean(res$overall_cov)
 ```
 
-```{r}
+```{r, echo = FALSE}
 save(res, file = "./web/data/bayes_simple/beta0_univariate_cv1.rds")
 ```
 
 ```{r, echo=FALSE}
 load("./web/data/bayes_simple/beta0_univariate_cv1.rds")
-mean(res$overall_cov)
+cov_b0_U <- mean(res$overall_cov)
 ```
 
+### Comparison
+
+```{r}
+tbl <- data.frame("Original" = c(int_b0_O, cov_b0_O), "Univariate" = c(int_b0_U, cov_b0_U))
+rownames(tbl) <- c("Lower (Single)", "Upper (Single)", "Coverage (100 Simulations)")
+tbl %>% kbl() %>% kable_material(c("striped", "hover"))
+```
 
 ## Beta = 3
 
@@ -89,7 +95,7 @@ mean(res$overall_cov)
 set.seed(my_seed)
 tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "original", time = TRUE)
 
-print(c(mean(tmp$lower), mean(tmp$upper)))
+int_b3_O <- c(mean(tmp$lower), mean(tmp$upper))
 ```
 
 #### Univariate
@@ -98,7 +104,7 @@ print(c(mean(tmp$lower), mean(tmp$upper)))
 set.seed(my_seed)
 tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", time = TRUE)
 
-print(c(mean(tmp$lower), mean(tmp$upper)))
+int_b3_U <- c(mean(tmp$lower), mean(tmp$upper))
 ```
 
 ### Coverage
@@ -108,7 +114,7 @@ print(c(mean(tmp$lower), mean(tmp$upper)))
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "original")
-mean(res$overall_cov)
+cov_b3_O <- mean(res$overall_cov)
 ```
 
 ```{r, echo=FALSE}
@@ -117,7 +123,7 @@ save(res, file = "./web/data/bayes_simple/beta3_original_cv1.rds")
 
 ```{r, echo=FALSE}
 load("./web/data/bayes_simple/beta3_original_cv1.rds")
-mean(res$overall_cov)
+cov_b3_O <- mean(res$overall_cov)
 ```
 
 #### Univariate
@@ -125,7 +131,7 @@ mean(res$overall_cov)
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
-mean(res$overall_cov)
+cov_b3_U <-mean(res$overall_cov)
 ```
 
 ```{r, echo=FALSE}
@@ -134,7 +140,15 @@ save(res, file = "./web/data/bayes_simple/beta3_univariate_cv1.rds")
 
 ```{r, echo=FALSE}
 load("./web/data/bayes_simple/beta3_univariate_cv1.rds")
-mean(res$overall_cov)
+cov_b3_U <-mean(res$overall_cov)
+```
+
+### Comparison
+
+```{r}
+tbl <- data.frame("Original" = c(int_b3_O, cov_b3_O), "Univariate" = c(int_b3_U, cov_b3_U))
+rownames(tbl) <- c("Lower", "Upper", "Coverage")
+tbl %>% kbl() %>% kable_material(c("striped", "hover"))
 ```
 
 # Many Covariates
@@ -148,6 +162,7 @@ mean(res$overall_cov)
 ```{r}
 set.seed(my_seed)
 tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original", time = TRUE)
+
 plot_boot(tmp)
 ```
 
@@ -156,8 +171,10 @@ plot_boot(tmp)
 ```{r}
 set.seed(my_seed)
 tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate", time = TRUE)
+
 plot_boot(tmp)
 ```
+
 
 ### Coverage
 
@@ -195,7 +212,6 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 ```{r, eval = FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate")
-save(res, file = "./web/data/bayes_simple/many_univariate_cv1.rds")
 ```
 
 ```{r, echo=FALSE}
@@ -224,13 +240,20 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 
 ```{r, eval = FALSE}
 set.seed(my_seed)
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 6000, n = 100, nboot = 100, type = "normal", time = TRUE)
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 6000, n = 100, nboot = 100, type = "cadillac", time = TRUE)
 ```
 
-Generate data: 46.468 sec elapsed
-Cross Validation: 0.701 sec elapsed
-Bootstrapping: 1046.003 sec elapsed
-Overall: 1093.173 sec elapsed
+Generate data: 46.85 sec elapsed
+
+Cross Validation: 1.131 sec elapsed
+
+Bootstrapping: 1048.716 sec elapsed
+
+Overall: 1096.699 sec elapsed
+
+Cadillac: 2152.769 sec elapsed
+
+Normal: 1097.472 sec elapsed
 
 # Real Data
 
@@ -247,16 +270,16 @@ const <- apply(dat$X, 2, function(x) length(unique(x)) == 1)
 dat$X <- dat$X[,!dup & !const]
 ```
 
-### Perform Bootstrap
+### Perform Bootstrap / plot
 
 ```{r}
 set.seed(my_seed)
 rhee <- eb_boot(dat = dat, type = "univariate", nboot = 200, time = TRUE)
-```
 
-```{r}
 plot_boot(rhee, n = 60)
 ```
+
+Number intervals not containing 0:
 
 ```{r}
 lowers <- apply(rhee[["lower"]], 2, mean, na.rm = TRUE)
@@ -272,9 +295,7 @@ dat$X <- ncvreg::std(dat$X)
 
 set.seed(my_seed)
 pollution <- eb_boot(dat = dat, type = "univariate", time = TRUE)
-```
 
-```{r}
 plot_boot(pollution)
 ```
 
@@ -286,16 +307,7 @@ dat$X <- ncvreg::std(dat$X)
 
 set.seed(my_seed)
 whoari <- eb_boot(dat = dat, type = "univariate", time = TRUE)
-```
 
-```{r}
 plot_boot(whoari)
-```
-
-
-```{r}
-t(1:4 * t(matrix(1, nrow = 4, ncol = 4)))
-
-rep(1, 5) - t(1:4 * t(matrix(1, nrow = 5, ncol = 4))) 
 ```
 

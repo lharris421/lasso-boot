@@ -1,9 +1,9 @@
 ## Laplace functions
-dlaplace <- function(x, rate = 1) {
+dlaplace <- function(x, rate = 1) { # DONE
   dexp(abs(x), rate) / 2
 }
 
-qlaplace <- function(p, rate = 1) {
+qlaplace <- function(p, rate = 1) {# DONE
   if (p <= .5) {
     p <- (.5 - p)*2
     qexp(p, rate)*-1
@@ -13,14 +13,12 @@ qlaplace <- function(p, rate = 1) {
   }
 }
 
-rlaplace <- function(n, rate = 1) {
+rlaplace <- function(n, rate = 1) {# DONE
   rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
 }
 
-find_thresh <- function(x, y) { abs(t(x) %*% y) / length(y) }
-
 ## Log-liklihood using partial residuals
-ll <- function(beta, partial_residuals, sigma, xvar, type = "original", ynew) {
+ll <- function(beta, partial_residuals, sigma, xvar, type = "original", ynew) {# DONE
 
   # Compute the log-likelihood(s)
   if (type == "univariate") {
@@ -51,7 +49,7 @@ density_function <- function(x, rate, partial_residuals, sigma, xvar, normalizer
 }
 
 ## Objective
-obj <- function(beta, p, sigma, rate, xvar, partial_residuals, bounds, normalizer, multiplier, type = "original", ynew) {
+obj <- function(beta, p, sigma, rate, xvar, partial_residuals, bounds, normalizer, multiplier, type = "original", ynew) { # DONE
 
   prob <- integrate(
     density_function, lower = bounds[1], upper = beta,
@@ -63,7 +61,7 @@ obj <- function(beta, p, sigma, rate, xvar, partial_residuals, bounds, normalize
 
 }
 
-post_quant <- function(sig, post_mode, sigma, rate, xvar, partial_residuals, type = "original", ynew) {
+post_quant <- function(sig, post_mode, sigma, rate, xvar, partial_residuals, type = "original", ynew) { # DONE
 
   ## Normalizing constant so that the log posterior = 0 at the posterior mode
   multiplier <- -density_function(
@@ -135,99 +133,52 @@ post_quant <- function(sig, post_mode, sigma, rate, xvar, partial_residuals, typ
 
 }
 
-plot_boot <- function(eb_boot, n = 30) {
+plot_boot <- function(eb_boot) {
 
-  rm_lower <- apply(eb_boot[["lower"]], 2, function(x) sum(is.na(x))); names(rm_lower) <- names(eb_boot$truth)
-  rm_upper <- apply(eb_boot[["upper"]], 2, function(x) sum(is.na(x))); names(rm_upper) <- names(eb_boot$truth)
-
-  rm_lower <- rm_lower[rm_lower != 0]
-  rm_upper <- rm_upper[rm_upper != 0]
-
-  if (length(rm_lower) > 0 ) {
-    print(paste0(length(rm_lower), " total variables with NA entries, summary: "))
-    print(summary(rm_lower))
-  }
-
-  lowers <- apply(eb_boot[["lower"]], 2, mean, na.rm = TRUE)
-  uppers <- apply(eb_boot[["upper"]], 2, mean, na.rm = TRUE)
-  plot_res <- data.frame(truth = eb_boot[["truth"]], grp = names(eb_boot[["truth"]]), lower = lowers, upper = uppers) %>%
-    dplyr::arrange(desc(abs(truth))) %>%
-    head(n)
+  lowers <- apply(eb_boot[["lower"]], 2, mean)
+  uppers <- apply(eb_boot[["upper"]], 2, mean)
+  plot_res <- data.frame(truth = eb_boot[["truth"]], grp = names(eb_boot[["truth"]]), lower = lowers, upper = uppers)
 
   plot_res %>%
     ggplot() +
-    geom_errorbar(aes(xmin = lower, xmax = upper, y = grp)) +
     geom_point(aes(x = truth, y = grp)) +
+    geom_errorbar(aes(xmin = lower, xmax = upper, y = grp)) +
     theme_bw() +
     labs(y = "Variable", x = "Estimate")
-}
-
-dens <- function(x, z, lambda, sigma2, n, normalizer = 1, multiplier = 1) {
-
-  return(((exp(-(n/sigma2)*(.5*(x - z)^2 + lambda*abs(x)))) / multiplier) / normalizer)
 
 }
 
-obj_simp <- function(beta, p, z, lambda, sigma2, n, normalizer, multiplier, lwr) {
+dens <- function(x, z, lambda, sigma2, normalizer = 1) {
+
+  return((exp((-.5/sigma2)*(z - x)^2) / exp(lambda*abs(x))) / normalizer)
+  ## return((exp((-.5)*(z - x)^2) / exp(lambda*abs(x))) / normalizer)
+
+}
+
+obj_simp <- function(beta, p, z, lambda, sigma2, normalizer, lwr) {
 
   prob <- integrate(
     dens, lower = lwr, upper = beta,
-    z = z, lambda = lambda, sigma2 = sigma2, n = n,
-    multiplier = multiplier, normalizer = normalizer
+    z = z, lambda = lambda, sigma2 = sigma2, normalizer = normalizer
   )$value
 
   return(p - prob)
 
 }
 
-eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original", prog = FALSE, sgm = 1, debias = FALSE, dat = NULL, time = FALSE) {
+eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original", prog = FALSE, sgm = 1, debias = FALSE) { # Done
 
-  if (time) tic(msg = "Overall")
-  nlambda <- 100
+  dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n, sgm = sgm)
 
-  if (is.null(dat)) {
+  tbeta <- dat$beta
+  X <- dat$X
+  y <- dat$y
 
-    if (time) tic(msg = "Generate data")
-    dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n, sgm = sgm)
-
-    X <- dat$X
-    y <- dat$y
-    p <- ncol(X)
-    if (time) toc()
-
-    if (time) tic(msg = "Cross Validation")
-    cv_res <- cv.ncvreg(X, y, penalty = "lasso")
-    sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
-    lam <- cv_res$lambda.min
-    rate <- (lam*n / sigma2)
-    if (time) toc()
-
-    tbeta <- dat$beta
-
-
-  } else {
-
-    X <- dat$X
-    y <- dat$y
-    p <- ncol(X)
-
-    if (time) tic(msg = "Cross Validation")
-    cv_res <- cv.ncvreg(X, y, penalty = "lasso")
-    sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
-    lam <- cv_res$lambda.min
-    rate <- (lam*n / sigma2)
-    if (time) toc()
-
-    tbeta <- coef(cv_res$fit, lambda = lam)[-1]
-
-  }
-
-  lowers <- matrix(nrow = nboot, ncol = p)
-  uppers <- matrix(nrow = nboot, ncol = p)
+  lowers <- matrix(nrow = nboot, ncol = length(tbeta))
+  uppers <- matrix(nrow = nboot, ncol = length(tbeta))
 
   if (prog) pb <- txtProgressBar(1, nboot, style=3)
 
-  if (time) tic(msg = "Bootstrapping")
   for (i in 1:nboot) {
 
     idx_new <- sample(1:length(y), replace = TRUE)
@@ -235,107 +186,90 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
     xnew <- X[idx_new,,drop=FALSE]
     xnew <- ncvreg::std(xnew)
 
-    lambda_max <- max(apply(xnew, 2, find_thresh, ynew))
-    lambda_min <- lam - lam / 100 ## set min to be slightly smaller
-    if (lambda_min > lambda_max | lam > lambda_max) {
-      lambda_max <- lam + lam / 100
-      nlambda <- 2
-    }
-    lambda_seq <- 10^(seq(log(lambda_max, 10), log(lambda_min, 10), length.out = nlambda))
+    ## Make orthonormal
+    ## if (type == "univariate") {xnew <- ncvreg::std(xnew); xnew <- xnew / sqrt(length(ynew))}
+    ## if (type == "univariate") {xnew <- ncvreg::std(xnew)}
+    cv_res <- cv.ncvreg(xnew, ynew, penalty = "lasso")
+    sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]; sigma <- sqrt(sigma2)
+    lam <- cv_res$lambda.min
+    coefs <- coef(cv_res$fit, lambda = lam)
+    rate <- (lam*n / sigma2)
 
-    lasso_fit <- ncvreg(xnew, ynew, penalty = "lasso", lambda = lambda_seq)
-    coefs <- coef(lasso_fit, lambda = lam)
-
-    ## Try and do without for loop
-    if (type == "univariate") {
-
-      xnew_ns <- xnew[,attr(xnew, "nonsingular") == 1:ncol(xnew)]
-      post_modes <- coefs[-1][attr(xnew, "nonsingular") == 1:ncol(xnew)]
-
-      sub <- t(t(xnew_ns) * post_modes)
-      xb <- (xnew_ns %*% as.matrix(post_modes, ncol = 1))
-      xb <- - sub + as.numeric(xb)
-
-      partial_residuals <- (ynew - coefs[1]) - xb
-      len <- nrow(partial_residuals)
-
-      # z <- (1/len)*diag(t(xnew_ns) %*% partial_residuals)
-      # R <-  (1/len)*diag(t(partial_residuals) %*% partial_residuals)
-      z <- (1/len)*colSums(xnew_ns * partial_residuals)
-      R <-  (1/len)*colSums(partial_residuals * partial_residuals)
-
-      obs_lw <- pnorm(0, z + lam, sqrt(sigma2 / n))
-      obs_up <- pnorm(0, z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
-
-      # p1 <- sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2))
-      # p3 <- (sqrt(2*pi*(sigma2/n)))
-      # lwr <- obs_lw*p1* exp(-(n/(2*sigma2))*((R) - (z + lam)^2))*p3
-      # upr <- obs_up*p1* exp(-(n/(2*sigma2))*((R) - (z - lam)^2))*p3
-      # tdens <- p1*p3*(obs_lw* exp(-(n/(2*sigma2))*((R) - (z + lam)^2)) + obs_up* exp(-(n/(2*sigma2))*((R) - (z - lam)^2)))
-
-      lwr <- obs_lw*exp(-(n/(2*sigma2))*((R) - (z + lam)^2))
-      upr <- obs_up*exp(-(n/(2*sigma2))*((R) - (z - lam)^2))
-      tdens <- lwr + upr
-
-      prop_lw <- lwr  / tdens
-      prop_up <- upr / tdens
-
-      lower <- ifelse(prop_lw >= .1, qnorm(.1 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n)), qnorm(.9 * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE))
-      upper <- ifelse(prop_lw >= .9, qnorm(.9 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n)), qnorm(.1 * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE))
-
-      rescale <- (attr(xnew, "scale")[attr(xnew, "nonsingular") == 1:ncol(xnew)])^(-1)
-      lowers[i,] <- lower * rescale
-      uppers[i,] <- upper * rescale
-
-    } else {
+    if (type == "univariate") sigma2 <- sigma2 / length(ynew)
 
     ## Beta specific
-    for (j in attr(xnew, "nonsingular")) {
+    for (j in 1:length(tbeta)) {
 
-      idx <- as.numeric(which(attr(xnew, "nonsingular") == j))
-      post_mode <- coefs[-1][idx]
-      xvar <- xnew[,idx,drop=FALSE]
+      post_mode <- coefs[-1][j]
+      xvar <- xnew[,j,drop=FALSE]
 
-      partial_residuals <- ynew - (coefs[1] + xnew[,-idx,drop=FALSE] %*% coefs[-1][-idx])
+      partial_residuals <- ynew - (coefs[1] + xnew[,-j,drop=FALSE] %*% coefs[-1][-j])
 
       ## Need to compress this into a single call in future
       if (type == "univariate") {
 
+        ## z <- (1/length(partial_residuals))*as.numeric(t(xvar) %*% ynew)
         z <- (1/length(partial_residuals))*as.numeric(t(xvar) %*% partial_residuals)
-        R <-  (1/length(partial_residuals))*as.numeric(t(partial_residuals) %*% partial_residuals)
+        ## z <- as.numeric(t(xvar) %*% ynew)
+        ## z <- as.numeric(t(xvar) %*% partial_residuals)
+        ## z <- post_mode
+        ## sigma2 <- sigma2 / length(partial_residuals)
+        lam <- lam ## standardized with sd not length n??
+        denom <- integrate(
+          dens, lower = -Inf, upper = Inf,
+          z = z, lambda = lam, sigma2 = sigma2
+        )$value
 
-        lwr2 <- pnorm(0, z + lam, sqrt(sigma2 / n))*sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2)) * exp(-(n/(2*sigma2))*((R) - (z + lam)^2))*(sqrt(2*pi*(sigma2/n)))
-        upr2 <- pnorm(0, z - lam, sqrt(sigma2 / n), lower.tail = FALSE)*sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2)) * exp(-(n/(2*sigma2))*((R) - (z - lam)^2))*(sqrt(2*pi*(sigma2/n)))
+        ## Find the largest density, used for determining bounds for uniroot
+        ymode <- dens(
+          x = post_mode, z = z, lambda = lam, sigma2 = sigma2,
+          normalizer = denom
+        )
 
-        tdens <- lwr2 + upr2
-        prop_lw <- lwr2  / tdens
-        prop_up <- upr2  / tdens
-        obs_lw <- pnorm(0, z + lam, sqrt(sigma2 / n))
-        obs_up <- pnorm(0, z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+        ## Determine bounds
+        step <- sqrt(sigma2)
+        curr <- step
+        while (TRUE) {
 
-        max_lower <- ((pnorm(0, z + lam, sqrt(sigma2 / n)) / obs_lw) * prop_lw)
+          xvals <- post_mode + c(-1, 1)*curr
+          yvals <- dens(
+            x = xvals, z = z, lambda = lam, sigma2 = sigma2,
+            normalizer = denom
+          )
 
-        if (max_lower >= .1) {
-          lower <- qnorm(.1 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n))
-        } else {
-          lower <- qnorm(.9 * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+          if (all(yvals < (ymode / 1000))) {
+            break
+          } else {
+            curr <- curr + step
+          }
         }
 
-        if (max_lower >= .9) {
-          upper <- qnorm(.9 * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n))
-        } else {
-          upper <- qnorm(.1 * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
-        }
+        denom <- integrate(
+          dens, lower = post_mode - curr, upper = post_mode + curr,
+          z = z, lambda = lam, sigma2 = sigma2
+        )$value
 
+        lower <- uniroot(
+          obj_simp, c(post_mode - curr, post_mode + curr), p = .1,
+          z = z, lambda = lam, sigma2 = sigma2, normalizer = denom, lwr = post_mode - curr
+        )$root
+        upper <- uniroot(
+          obj_simp, c(post_mode - curr, post_mode + curr), p = .9,
+          z = z, lambda = lam, sigma2 = sigma2, normalizer = denom, lwr = post_mode - curr
+        )$root
+
+        ## bounds <- c(lower, upper) * (sqrt(length(ynew))*attr(xnew, "scale")[j])^(-1)
         bounds <- (c(lower, upper) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
 
       } else if (type == "original") {
 
-        bounds <- (post_quant(.8, post_mode, sigma, rate, xvar, partial_residuals, type = type, ynew) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[idx])^(-1)
+        bounds <- (post_quant(.8, post_mode, sigma, rate, xvar, partial_residuals, type = type, ynew) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
 
       } else if (type == "normal") {
 
         n <- length(ynew)
+        # score <- (1/sigma2)*(t(partial_residuals) %*% xvar - post_mode*(t(xvar) %*% xvar + ((n^2*lam^2) / (2*sigma2))))
+        # norm_mean <- post_mode - (information_inv * score)
         norm_mean <- (2*sigma2*t(xvar) %*% partial_residuals) * (2*sigma2*t(xvar) %*% xvar + n^2*lam^2)^(-1)
         norm_var <- (2*sigma2^2) / (2*(t(xvar) %*% xvar)*sigma2 + n^2*lam^2)
         bounds <- (qnorm(c(.1, .9), norm_mean, sqrt(norm_var)) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
@@ -343,13 +277,13 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
       } else if (type == "cadillac") {
 
         t2i_scale <- lam^2
-        r <- ynew - (coefs[1] + xnew[,-idx] %*% coefs[-1][-idx])
-        beta <- coefs[-1][idx]
+        r <- ynew - (coefs[1] + xnew[,-j] %*% coefs[-1][-j])
+        beta <- coefs[-1][j]
         tau2i_mu <- sqrt((sigma2*lam^2) / beta^2)
         tau2 <- 1 / rinvgauss(1, tau2i_mu, t2i_scale)
 
-        A <- (t(xnew[,idx, drop=FALSE]) %*% xnew[,idx,drop=FALSE]) + (1/tau2)
-        mu <- solve(A)*(t(xnew[,idx,drop=FALSE]) %*% r)
+        A <- (t(xnew[,j, drop=FALSE]) %*% xnew[,j,drop=FALSE]) + (1/tau2)
+        mu <- solve(A)*(t(xnew[,j,drop=FALSE]) %*% r)
         bounds <- (qnorm(c(.1, .9), mu, sqrt(sigma2*solve(A))) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[j])^(-1)
 
       } else {
@@ -357,7 +291,6 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
         stop(paste0("Type: ", type, " not an option."))
 
       }
-    }
 
       uppers[i,j] <- bounds[2]
       lowers[i,j] <- bounds[1]
@@ -367,13 +300,12 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, type = "original"
     if(prog) setTxtProgressBar(pb, i)
 
   }
-  if (time) toc()
-  if (time) toc() ## Overall
+
   return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta))
 
 }
 
-eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, nboot = 100, nsim = 100, type = "original", debias = FALSE) {
+eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, nboot = 100, nsim = 100, type = "original", debias = FALSE) { # DONE
 
   overall_cov <- numeric(nsim)
   indiv_cov <- matrix(nrow = nsim, ncol = p)

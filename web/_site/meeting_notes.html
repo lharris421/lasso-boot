@@ -1664,10 +1664,10 @@ border-radius: 0px;
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
-  <a href="bayes_simple.html">Comparing Bayes Bootstrap Methods</a>
+  <a href="emperical_bayes.html">EB Bootstrap Methods</a>
 </li>
 <li>
-  <a href="bayes_simple_cv_once.html">CV Once</a>
+  <a href="emperical_bayes_cv_once.html">EB Bootstrap Methods - CV Once</a>
 </li>
 <li>
   <a href="meeting_notes.html">Meeting Notes</a>
@@ -1703,17 +1703,15 @@ things to discuss before, then update it with any other ideas after</li>
 </ul>
 <div id="running-to-do" class="section level1">
 <h1>Running To-Do</h1>
-<ul class="task-list">
-<li><input type="checkbox"></input>Look into faster versions of integration
-for univariate (grid, Guass Hermite, Huber loss)</li>
+<ul>
 <li><input type="checkbox"></input>Implement method where bootstrap is also
 used to select lambda</li>
 <li><input type="checkbox"></input>Figure out AWS bucket sharing
 <ul class="task-list">
 <li><input type="checkbox" checked></input>Read: <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-walkthroughs-managing-access-example2.html" class="uri">https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-walkthroughs-managing-access-example2.html</a>
 <ul class="task-list">
-<li><input type="checkbox"></input>Check if Patrick is admin, if not… may not
-work -&gt; may just need to specify root instead?</li>
+<li><input type="checkbox" checked></input>Check if Patrick is admin, if
+not… may not work -&gt; may just need to specify root instead?</li>
 </ul></li>
 <li><input type="checkbox" checked></input>Read UIowa startup guide to get
 a better idea of what the account setup is structured as
@@ -1721,31 +1719,39 @@ a better idea of what the account setup is structured as
 <li>Issue may be I am using version 2, not version 1 of command line
 tools</li>
 </ul></li>
+<li><input type="checkbox"></input>Reach out to Patrick’s contact in IT?</li>
+<li><input type="checkbox"></input>json bucket policy generating function</li>
 </ul></li>
-<li><input type="checkbox"></input>Combine two sets of functions together
-(clean up)</li>
 <li><input type="checkbox"></input>Read Gaussian Mirrors paper: <a href="https://doi.org/10.1080/01621459.2021.1923510" class="uri">https://doi.org/10.1080/01621459.2021.1923510</a></li>
 <li><input type="checkbox"></input>Look at Univariate example when Beta is
 very small, say, beta = .01</li>
-<li><input type="checkbox"></input>Profile code to see what is expensive in
-the Bayesian bootstrap</li>
-<li><input type="checkbox"></input>Find a way to cleanly present the plots,
-maybe make ggplotly instead?</li>
-<li><input type="checkbox"></input>Look into variational Bayes (again) for
-lasso, or generally if someone has tried to approximate the lasso
-posterior (numerically or analytically)</li>
+<li><input type="checkbox"></input>Consider HPD method of interval
+finding</li>
+<li><input type="checkbox"></input>Speed up GenDataABN</li>
+<li><input type="checkbox"></input>Add a global .gitignore</li>
+<li><input type="checkbox"></input>Make better method names</li>
+<li><input type="checkbox" checked></input>Look into faster versions of
+integration for univariate (grid, Guass Hermite, Huber loss)</li>
+<li>Grid didn’t seem viable, but I have a fast solution now anyway</li>
+<li><input type="checkbox" checked></input>Combine two sets of functions
+together (clean up)</li>
+<li><input type="checkbox" checked></input>Profile code to see what is
+expensive in the Bayesian bootstrap</li>
 <li><input type="checkbox" checked></input>Create mre for “Error: Supplied
 lambda value(s) are outside the range of the model fit.”
 <ul>
 <li>In process of creating realized the mistakes I was making</li>
 </ul></li>
-<li><input type="checkbox" checked></input>Move denominator into log to see
-if that would help
+</ul>
+</div>
+<div id="week-of-monday-september-25th" class="section level1">
+<h1>Week of Monday, September 25th</h1>
 <ul>
-<li>Didn’t have an noticeable improvement</li>
-</ul></li>
-<li><input type="checkbox"></input>Consider HPD method of interval finding
--&gt; likely too computationally demanding</li>
+<li>I continue to have difficulty with AWS Login with V2</li>
+<li>I did figure out issue was having with “univariate” version, but now
+is superceeded</li>
+<li>Found that the marginal posterior is just a mixture of truncated
+normals</li>
 </ul>
 </div>
 <div id="week-of-monday-september-11th-2023" class="section level1">
