@@ -6,13 +6,14 @@ Authors@R: person("Logan", "Harris", role=c("aut","cre"), email="logan-harris@ui
 Description: More ideas on what to focus on.
 Depends:
   data.table,
-  ggplot2,
-  magrittr,
   dplyr,
-  stringr,
+  ggplot2,
+  hdrm,
   knitr,
+  magrittr,
   Matrix,
-  hdrm
+  stringr,
+  tictoc
 License: GPL-3
 LazyData: TRUE
 VignetteBuilder: knitr
