@@ -144,7 +144,7 @@ post_quant <- function(sig, post_mode, sigma, rate, xvar, partial_residuals, yne
 ################################################################################
 ##### Bootstrapping / plotting / sim functions #################################
 ################################################################################
-eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_level = .8, type = "univariate", lambda = "cv_once", prog = FALSE, sgm = 1, debias = FALSE, dat = NULL, time = FALSE) {
+eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_level = .8, type = "univariate", lambda = "cv_once", prog = FALSE, sgm = 1, debias = FALSE, dat = NULL, time = FALSE, interval_type = "equal") {
 
   lower_p <- (1 - significance_level) / 2
   upper_p <- significance_level + lower_p
@@ -181,6 +181,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
     X <- dat$X
     y <- dat$y
     p <- ncol(X)
+    n <- length(y)
 
     if (lambda == "cv_once") {
 
@@ -236,15 +237,11 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
       ns_index <- attr(xnew, "nonsingular")
       post_modes <- coefs[-1]
 
-      xb <-  as.numeric((xnew %*% as.matrix(post_modes, ncol = 1))) - t(t(xnew) * post_modes)
+      XB <-  coefs[1] + as.numeric(xnew %*% post_modes) - (xnew * matrix(post_modes, nrow=nrow(xnew), ncol=ncol(xnew), byrow=TRUE))
+      partial_residuals <- ynew - XB
 
-      partial_residuals <- (ynew - coefs[1]) - xb
-      len <- nrow(partial_residuals)
-
-      # z <- (1/len)*diag(t(xnew) %*% partial_residuals)
-      # R <-  (1/len)*diag(t(partial_residuals) %*% partial_residuals)
-      z <- (1/len)*colSums(xnew * partial_residuals)
-      R <-  (1/len)*colSums(partial_residuals * partial_residuals)
+      z <- (1/n)*colSums(xnew * partial_residuals)
+      # R <-  (1/len)*colSums(partial_residuals * partial_residuals)
 
       obs_lw <- pnorm(0, z + lam, sqrt(sigma2 / n))
       obs_up <- pnorm(0, z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
@@ -255,23 +252,51 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
       # upr <- obs_up*p1* exp(-(n/(2*sigma2))*((R) - (z - lam)^2))*p3
       # tdens <- p1*p3*(obs_lw* exp(-(n/(2*sigma2))*((R) - (z + lam)^2)) + obs_up* exp(-(n/(2*sigma2))*((R) - (z - lam)^2)))
 
-      lwr <- obs_lw*exp(-(n/(2*sigma2))*((R) - (z + lam)^2))
-      upr <- obs_up*exp(-(n/(2*sigma2))*((R) - (z - lam)^2))
-      tdens <- lwr + upr
+      # lwr <- obs_lw*exp(-(n/(2*sigma2))*((R) - (z + lam)^2))
+      # upr <- obs_up*exp(-(n/(2*sigma2))*((R) - (z - lam)^2))
 
-      prop_lw <- lwr  / tdens
-      prop_up <- upr / tdens
+      enzls <- exp(n*z*lam / sigma2)
+      lwr <- obs_lw*enzls ## Weight back in other direction
+      upr <- obs_up*enzls^(-1)
 
-      lower <- ifelse(
-        prop_lw >= lower_p,
-        qnorm(lower_p * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n)),
-        qnorm(upper_p * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
-      )
-      upper <- ifelse(
-        prop_lw >= upper_p,
-        qnorm(upper_p * (obs_lw / prop_lw), z + lam, sqrt(sigma2 / n)),
-        qnorm(lower_p * (obs_up / prop_up), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
-      )
+      prop_lw <- lwr  / (lwr + upr)
+
+      # if (interval_type == "HPD") {
+      #   lower_ps <- seq(0.01, (1 - significance_level) - 0.01, by = 0.01)
+      #   upper_ps <- 1 - lower_ps
+      #   lower <- upper <- numeric(length(z))
+      #   for (j in 1:length(z)) {
+      #     tmp_lower <- ifelse(
+      #       prop_lw[j] >= lower_ps,
+      #       qnorm(lower_ps * (obs_lw[j] / prop_lw[j]), z[j] + lam, sqrt(sigma2 / n)),
+      #       qnorm(upper_ps * (obs_up[j] / prop_up[j]), z[j] - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+      #     )
+      #     tmp_upper <- ifelse(
+      #       prop_lw[j] >= upper_ps,
+      #       qnorm(upper_ps * (obs_lw[j] / prop_lw[j]), z[j] + lam, sqrt(sigma2 / n)),
+      #       qnorm(lower_ps * (obs_up[j] / prop_up[j]), z[j] - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+      #     )
+      #     diffs <- tmp_upper - tmp_lower
+      #     lower[j] <- tmp_lower[which.min(diffs)]
+      #     upper[j] <- tmp_upper[which.min(diffs)]
+      #   }
+      #
+      # } else {
+
+        lower_adj <- enzls^(-2)
+        upper_adj <- enzls^2
+        lower <- ifelse(
+          prop_lw >= lower_p,
+          qnorm(lower_p * (obs_lw + obs_up*lower_adj), z + lam, sqrt(sigma2 / n)),
+          qnorm(upper_p * (obs_up + obs_lw*upper_adj), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+        )
+        upper <- ifelse(
+          prop_lw >= upper_p,
+          qnorm(upper_p * (obs_lw + obs_up*lower_adj), z + lam, sqrt(sigma2 / n)),
+          qnorm(lower_p * (obs_up + obs_lw*upper_adj), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+        )
+
+      #}
 
       rescale <- (attr(xnew, "scale")[ns_index])^(-1)
       lowers[i,ns_index] <- lower * rescale
@@ -355,6 +380,8 @@ plot_boot <- function(eb_boot, n = 30) {
     dplyr::arrange(desc(abs(truth))) %>%
     head(n)
 
+  print(plot_res)
+
   plot_res %>%
     ggplot() +
     geom_errorbar(aes(xmin = lower, xmax = upper, y = grp)) +
@@ -363,7 +390,7 @@ plot_boot <- function(eb_boot, n = 30) {
     labs(y = "Variable", x = "Estimate")
 }
 
-eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, nboot = 100, nsim = 100, type = "original", debias = FALSE) {
+eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, nboot = 100, nsim = 100, type = "original", debias = FALSE, interval_type = "equal") {
 
   overall_cov <- numeric(nsim)
   indiv_cov <- matrix(nrow = nsim, ncol = p)
@@ -373,7 +400,7 @@ eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, nboot = 100, nsim = 100, t
   ## p, beta, n
   for (iter in 1:nsim) {
 
-    res <- eb_boot(beta = beta, p = p, b = b, n = n, nboot = nboot, type = type, debias = debias)
+    res <- eb_boot(beta = beta, p = p, b = b, n = n, nboot = nboot, type = type, debias = debias, interval_type = interval_type)
 
     lower_int <- apply(res[["lower"]], 2, mean)
     upper_int <- apply(res[["upper"]], 2, mean)

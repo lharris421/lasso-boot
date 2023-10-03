@@ -37,8 +37,10 @@ int_b0_O <- c(mean(tmp$lower), mean(tmp$upper))
 set.seed(my_seed)
 tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", time = TRUE)
 
-int_b0_U <- c(mean(tmp$lower), mean(tmp$upper))
+(int_b0_U <- c(mean(tmp$lower), mean(tmp$upper)))
 ```
+
+[1] -0.6897276 -0.1468678
 
 ### Coverage
 
@@ -107,6 +109,13 @@ tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate",
 int_b3_U <- c(mean(tmp$lower), mean(tmp$upper))
 ```
 
+```{r}
+set.seed(my_seed)
+tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", time = TRUE, interval_type = "HPD")
+
+c(mean(tmp$lower), mean(tmp$upper))
+```
+
 ### Coverage
 
 #### Original
@@ -172,7 +181,7 @@ plot_boot(tmp)
 set.seed(my_seed)
 tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate", time = TRUE)
 
-plot_boot(tmp)
+plot_boot(tmp, n = 60)
 ```
 
 
@@ -211,7 +220,7 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 
 ```{r, eval = FALSE}
 set.seed(my_seed)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate")
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate", interval_type = "HPD")
 ```
 
 ```{r, echo=FALSE}
@@ -268,6 +277,7 @@ dat <- readData(Rhee2006)
 dup <- duplicated(t(dat$X))
 const <- apply(dat$X, 2, function(x) length(unique(x)) == 1)
 dat$X <- dat$X[,!dup & !const]
+# dat$X <- std(dat$X)
 ```
 
 ### Perform Bootstrap / plot
@@ -276,7 +286,7 @@ dat$X <- dat$X[,!dup & !const]
 set.seed(my_seed)
 rhee <- eb_boot(dat = dat, type = "univariate", nboot = 200, time = TRUE)
 
-plot_boot(rhee, n = 60)
+plot_boot(rhee, n = 30)
 ```
 
 Number intervals not containing 0:
@@ -287,11 +297,39 @@ uppers <- apply(rhee[["upper"]], 2, mean, na.rm = TRUE)
 sum(sign(lowers) * sign(uppers) == 1)
 ```
 
+
+## Selective Inference
+
+- Infinite values is an issue
+
+```{r}
+library(selectiveInference)
+library(glmnet)
+
+# set.seed(my_seed)
+
+# cv_res <- cv.ncvreg(dat$X, dat$y, penalty = "lasso")
+cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
+(lam <- cv_res$lambda.min)
+# lam <- 0.01708248
+
+fit <- glmnet(dat$X, dat$y, standardize = FALSE)
+b <- coef(fit, s = lam)[-1]
+sh <- estimateSigma(dat$X, dat$y)$sigmahat  # About 0.4 or 0.45
+res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), sigma=sh, alpha = .2)
+bb <- res$vmat %*% dat$y
+B <- cbind(bb, res$ci, res$pv)
+rownames(B) <- names(res$vars)
+B <- B[is.finite(B[,2]) & is.finite(B[,3]),]
+B <- B[order(desc(abs(B[,1]))),][1:30,]
+CIplot(B, sort=FALSE, mar=c(4, 5, 1, 5), xlab=expression(beta))
+```
+
 ## pollution
 
 ```{r}
 dat <- readData(pollution)
-dat$X <- ncvreg::std(dat$X)
+# dat$X <- ncvreg::std(dat$X)
 
 set.seed(my_seed)
 pollution <- eb_boot(dat = dat, type = "univariate", time = TRUE)
@@ -303,11 +341,35 @@ plot_boot(pollution)
 
 ```{r}
 dat <- readData(whoari)
-dat$X <- ncvreg::std(dat$X)
+# dat$X <- ncvreg::std(dat$X)
 
 set.seed(my_seed)
 whoari <- eb_boot(dat = dat, type = "univariate", time = TRUE)
 
-plot_boot(whoari)
+plot_boot(whoari, n = 66)
 ```
+
+# Selective Inference
+
+## Generated Data
+
+```{r}
+# set.seed(my_seed)
+dat <- genDataABN(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 60, a = 6, b = 2, n = 100)
+
+X.std <- std(dat$X)
+y <- dat$y
+cv_res <- cv.glmnet(X.std, y, standardize=FALSE)
+(lam <- cv_res$lambda.min)
+fit <- cv_res$glmnet.fit
+b <- coef(fit, s=lam)[-1]
+
+sh <- estimateSigma(X.std, y)$sigmahat  # About 0.4 or 0.45
+res <- fixedLassoInf(X.std, y, b, lam*length(y), sigma=sh, alpha = .2)
+bb <- res$vmat %*% y
+B <- cbind(bb, res$ci, res$pv)
+rownames(B) <- names(res$vars)
+CIplot(B, sort=FALSE, mar=c(4, 5, 1, 5), xlab=expression(beta))
+```
+
 
