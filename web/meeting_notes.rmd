@@ -29,6 +29,32 @@ output:
 - [x] Profile code to see what is expensive in the Bayesian bootstrap
 - [x] Create mre for "Error: Supplied lambda value(s) are outside the range of the model fit."
   - In process of creating realized the mistakes I was making
+  
+# Literature Search
+
+- Confidence Intervals and Regions for the Lasso by Using Stochastic Variational Inequality Techniques in Optimization
+  - https://doi.org/10.1111/rssb.12184
+- Constructing confidence sets after lasso selection by randomized estimator augmentation
+  - https://doi.org/10.48550/arXiv.1904.08018
+  - Not sure about "after"
+- Confidence Sets Based on Penalized Maximum Likelihood Estimators in Gaussian Regression
+  - https://doi.org/10.48550/arXiv.0806.1652
+  - Seems to focus more on standard intervals rather than develop new methods, but could be an interesting read
+- Exact post-selection inference, with application to the lasso
+  - https://doi.org/10.1214/15-AOS1371
+  - Looks similar to selective inference
+  - Ahh, well probably because it is
+- High-Dimensional Inference: Confidence Intervals, p-Values and R-Software hdi
+  - https://doi.org/10.1214/15-STS527
+  - First cited paper for HDI package, seems very informative
+  
+  
+- Interesting how much it seems there is a focus on debiased intervals...
+  - With this, I feel like putting an emphasis on how often the intervals also contain the posterior mode would be beneficial
+- Many of these also to seem to be rather complex and do not have packages.
+
+- May need to make an argument about the width of the intervals alongside our argument that bias is okay
+  - Consider interval width assuming known value of $\sigma^2$
 
 # Week of Monday, September 25th
 

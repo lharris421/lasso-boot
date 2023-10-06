@@ -183,7 +183,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
     p <- ncol(X)
     n <- length(y)
 
-    if (lambda == "cv_once") {
+    # if (lambda == "cv_once") {
 
       if (time) tic(msg = "Cross Validation")
       cv_res <- cv.ncvreg(X, y, penalty = "lasso")
@@ -194,7 +194,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
 
       tbeta <- coef(cv_res$fit, lambda = lam)[-1]
 
-    }
+    #}
 
   }
 
@@ -231,72 +231,36 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
 
     coefs <- coef(lasso_fit, lambda = lam)
 
-    ## Try and do without for loop
     if (type == "univariate") {
 
       ns_index <- attr(xnew, "nonsingular")
       post_modes <- coefs[-1]
 
-      XB <-  coefs[1] + as.numeric(xnew %*% post_modes) - (xnew * matrix(post_modes, nrow=nrow(xnew), ncol=ncol(xnew), byrow=TRUE))
-      partial_residuals <- ynew - XB
+      partial_residuals <-  ynew - (coefs[1] + as.numeric(xnew %*% post_modes) - (xnew * matrix(post_modes, nrow=nrow(xnew), ncol=ncol(xnew), byrow=TRUE)))
 
       z <- (1/n)*colSums(xnew * partial_residuals)
-      # R <-  (1/len)*colSums(partial_residuals * partial_residuals)
+      se <- sqrt(sigma2 / n)
 
-      obs_lw <- pnorm(0, z + lam, sqrt(sigma2 / n))
-      obs_up <- pnorm(0, z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
+      obs_lw <- pnorm(0, z + lam, se)
+      obs_up <- pnorm(0, z - lam, se, lower.tail = FALSE)
 
-      # p1 <- sqrt(2*pi*sigma2)^(-n) * ((n*lam) / (2*sigma2))
-      # p3 <- (sqrt(2*pi*(sigma2/n)))
-      # lwr <- obs_lw*p1* exp(-(n/(2*sigma2))*((R) - (z + lam)^2))*p3
-      # upr <- obs_up*p1* exp(-(n/(2*sigma2))*((R) - (z - lam)^2))*p3
-      # tdens <- p1*p3*(obs_lw* exp(-(n/(2*sigma2))*((R) - (z + lam)^2)) + obs_up* exp(-(n/(2*sigma2))*((R) - (z - lam)^2)))
+      enzls <- exp(n*z*lam / sigma2)^2
 
-      # lwr <- obs_lw*exp(-(n/(2*sigma2))*((R) - (z + lam)^2))
-      # upr <- obs_up*exp(-(n/(2*sigma2))*((R) - (z - lam)^2))
+      lower_adj <- obs_lw + obs_up*enzls^(-1)
+      upper_adj <- obs_up + obs_lw*enzls
 
-      enzls <- exp(n*z*lam / sigma2)
-      lwr <- obs_lw*enzls ## Weight back in other direction
-      upr <- obs_up*enzls^(-1)
+      prop_lw <- obs_lw  / lower_adj
 
-      prop_lw <- lwr  / (lwr + upr)
-
-      # if (interval_type == "HPD") {
-      #   lower_ps <- seq(0.01, (1 - significance_level) - 0.01, by = 0.01)
-      #   upper_ps <- 1 - lower_ps
-      #   lower <- upper <- numeric(length(z))
-      #   for (j in 1:length(z)) {
-      #     tmp_lower <- ifelse(
-      #       prop_lw[j] >= lower_ps,
-      #       qnorm(lower_ps * (obs_lw[j] / prop_lw[j]), z[j] + lam, sqrt(sigma2 / n)),
-      #       qnorm(upper_ps * (obs_up[j] / prop_up[j]), z[j] - lam, sqrt(sigma2 / n), lower.tail = FALSE)
-      #     )
-      #     tmp_upper <- ifelse(
-      #       prop_lw[j] >= upper_ps,
-      #       qnorm(upper_ps * (obs_lw[j] / prop_lw[j]), z[j] + lam, sqrt(sigma2 / n)),
-      #       qnorm(lower_ps * (obs_up[j] / prop_up[j]), z[j] - lam, sqrt(sigma2 / n), lower.tail = FALSE)
-      #     )
-      #     diffs <- tmp_upper - tmp_lower
-      #     lower[j] <- tmp_lower[which.min(diffs)]
-      #     upper[j] <- tmp_upper[which.min(diffs)]
-      #   }
-      #
-      # } else {
-
-        lower_adj <- enzls^(-2)
-        upper_adj <- enzls^2
-        lower <- ifelse(
-          prop_lw >= lower_p,
-          qnorm(lower_p * (obs_lw + obs_up*lower_adj), z + lam, sqrt(sigma2 / n)),
-          qnorm(upper_p * (obs_up + obs_lw*upper_adj), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
-        )
-        upper <- ifelse(
-          prop_lw >= upper_p,
-          qnorm(upper_p * (obs_lw + obs_up*lower_adj), z + lam, sqrt(sigma2 / n)),
-          qnorm(lower_p * (obs_up + obs_lw*upper_adj), z - lam, sqrt(sigma2 / n), lower.tail = FALSE)
-        )
-
-      #}
+      lower <- ifelse(
+        prop_lw >= lower_p,
+        qnorm(lower_p * lower_adj, z + lam, se),
+        qnorm(1 - ((1 - lower_p) * upper_adj), z - lam, se)
+      )
+      upper <- ifelse(
+        prop_lw >= upper_p,
+        qnorm(upper_p * lower_adj, z + lam, se),
+        qnorm(1 - ((1 - upper_p) * upper_adj), z - lam, se)
+      )
 
       rescale <- (attr(xnew, "scale")[ns_index])^(-1)
       lowers[i,ns_index] <- lower * rescale
@@ -379,6 +343,7 @@ plot_boot <- function(eb_boot, n = 30) {
   plot_res <- data.frame(truth = eb_boot[["truth"]], grp = names(eb_boot[["truth"]]), lower = lowers, upper = uppers) %>%
     dplyr::arrange(desc(abs(truth))) %>%
     head(n)
+  plot_res$grp <- factor(plot_res$grp, levels = rev(plot_res$grp))
 
   print(plot_res)
 
@@ -389,6 +354,24 @@ plot_boot <- function(eb_boot, n = 30) {
     theme_bw() +
     labs(y = "Variable", x = "Estimate")
 }
+
+boot_ci <- function(eb_boot) {
+
+  rm_lower <- apply(eb_boot[["lower"]], 2, function(x) sum(is.na(x))); names(rm_lower) <- names(eb_boot$truth)
+  rm_upper <- apply(eb_boot[["upper"]], 2, function(x) sum(is.na(x))); names(rm_upper) <- names(eb_boot$truth)
+
+  rm_lower <- rm_lower[rm_lower != 0]
+  rm_upper <- rm_upper[rm_upper != 0]
+
+  lowers <- apply(eb_boot[["lower"]], 2, mean, na.rm = TRUE)
+  uppers <- apply(eb_boot[["upper"]], 2, mean, na.rm = TRUE)
+
+  plot_res <- data.frame(estimate = eb_boot[["truth"]], variable = names(eb_boot[["truth"]]), lower = lowers, upper = uppers, method = "Lasso Boot")
+
+  return(plot_res)
+
+}
+
 
 eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, nboot = 100, nsim = 100, type = "original", debias = FALSE, interval_type = "equal") {
 
@@ -417,3 +400,32 @@ eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, nboot = 100, nsim = 100, t
 
 }
 ################################################################################
+plot_ci_comparison <- function(ci_df, nvars = 30) {
+
+  plot_vars <- list()
+  for (current_method in unique(ci_df$method)) {
+    plot_vars[[current_method]] <- ci_df %>%
+      filter(method == current_method) %>%
+      dplyr::arrange(desc(abs(estimate))) %>%
+      slice_head(n = nvars) %>%
+      pull(variable)
+  }
+  plot_vars <- unique(unlist(plot_vars))
+
+  plot_res <- ci_df %>%
+    filter(variable %in% plot_vars) %>%
+    dplyr::arrange(desc(abs(estimate)))
+
+  plot_res$variable <- factor(plot_res$variable, levels = rev(plot_vars))
+
+  gg <- plot_res %>%
+    ggplot() +
+    geom_errorbar(aes(xmin = lower, xmax = upper, y = variable, color = method), alpha = .6) +
+    geom_point(aes(x = estimate, y = variable, color = method), alpha = .6) +
+    theme_bw() +
+    labs(y = "Variable", x = "Estimate")
+
+  return(gg)
+
+}
+

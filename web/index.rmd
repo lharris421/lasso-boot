@@ -14,3 +14,5 @@ Well, if somehow you found your way here and are not Logan or Patrick, then you'
 I'm heading into my 4th year as a PhD student in the Department of Biostatistics at the University of Iowa.
 
 My current research focus is on inference for lasso, currently and specifically, for the lasso.
+
+![Web link](https://github.com/lharris421/lasso-boot)

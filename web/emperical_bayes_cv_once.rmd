@@ -12,8 +12,7 @@ output:
 ```{r}
 source("./R/bayes_functions.R")
 
-library(TeachingDemos)
-my_seed <- char2seed("Logan M. Harris")
+my_seed <- 189807771
 ```
 
 # One Covariate
@@ -53,7 +52,7 @@ res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type
 cov_b0_O <- mean(res$overall_cov)
 ```
 
-```{r, echo=FALSE}
+```{r, eval=FALSE, echo = FALSE}
 save(res, file = "./web/data/bayes_simple/beta0_original_cv1.rds")
 ```
 
@@ -70,7 +69,7 @@ res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type
 cov_b0_U <- mean(res$overall_cov)
 ```
 
-```{r, echo = FALSE}
+```{r, eval = FALSE, echo = FALSE}
 save(res, file = "./web/data/bayes_simple/beta0_univariate_cv1.rds")
 ```
 
@@ -109,13 +108,6 @@ tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate",
 int_b3_U <- c(mean(tmp$lower), mean(tmp$upper))
 ```
 
-```{r}
-set.seed(my_seed)
-tmp <- eb_boot(beta = 3, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", time = TRUE, interval_type = "HPD")
-
-c(mean(tmp$lower), mean(tmp$upper))
-```
-
 ### Coverage
 
 #### Original
@@ -126,7 +118,7 @@ res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type
 cov_b3_O <- mean(res$overall_cov)
 ```
 
-```{r, echo=FALSE}
+```{r, eval=FALSE, echo = FALSE}
 save(res, file = "./web/data/bayes_simple/beta3_original_cv1.rds")
 ```
 
@@ -140,10 +132,10 @@ cov_b3_O <- mean(res$overall_cov)
 ```{r, eval=FALSE}
 set.seed(my_seed)
 res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, nboot = 100, nsim = 100, type = "univariate")
-cov_b3_U <-mean(res$overall_cov)
+cov_b3_U <- mean(res$overall_cov)
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval = FALSE}
 save(res, file = "./web/data/bayes_simple/beta3_univariate_cv1.rds")
 ```
 
@@ -187,35 +179,6 @@ plot_boot(tmp, n = 60)
 
 ### Coverage
 
-#### Original
-
-```{r, eval = FALSE}
-set.seed(my_seed)
-res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "original")
-```
-
-```{r, echo=FALSE}
-save(res, file = "./web/data/bayes_simple/many_original_cv1.rds")
-```
-
-```{r, echo=FALSE}
-load("./web/data/bayes_simple/many_original_cv1.rds")
-```
-
-##### Overall Coverage (per bootstrap)
-
-```{r}
-mean(res$overall_cov)
-hist(res$overall_cov, xlab = "Coverage", main ="")
-```
-
-##### Individual Coverage (per covariate)
-
-```{r}
-tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
-plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
-```
-
 #### Univariate
 
 ```{r, eval = FALSE}
@@ -223,7 +186,7 @@ set.seed(my_seed)
 res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), type = "univariate", interval_type = "HPD")
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval = FALSE}
 save(res, file = "./web/data/bayes_simple/many_univariate_cv1.rds")
 ```
 
@@ -245,32 +208,13 @@ tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
 plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 ```
 
-# Speed of Univariate
-
-```{r, eval = FALSE}
-set.seed(my_seed)
-tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2, p = 6000, n = 100, nboot = 100, type = "cadillac", time = TRUE)
-```
-
-Generate data: 46.85 sec elapsed
-
-Cross Validation: 1.131 sec elapsed
-
-Bootstrapping: 1048.716 sec elapsed
-
-Overall: 1096.699 sec elapsed
-
-Cadillac: 2152.769 sec elapsed
-
-Normal: 1097.472 sec elapsed
-
 # Real Data
 
 ## Rhee2006
 
 ### Pre-process data
 
-- Remove constant and perfectly colinear columns
+- Remove constant and perfectly co-linear columns
 
 ```{r}
 dat <- readData(Rhee2006)
@@ -286,7 +230,7 @@ dat$X <- dat$X[,!dup & !const]
 set.seed(my_seed)
 rhee <- eb_boot(dat = dat, type = "univariate", nboot = 200, time = TRUE)
 
-plot_boot(rhee, n = 30)
+plot_boot(rhee, n = 20)
 ```
 
 Number intervals not containing 0:
@@ -297,33 +241,6 @@ uppers <- apply(rhee[["upper"]], 2, mean, na.rm = TRUE)
 sum(sign(lowers) * sign(uppers) == 1)
 ```
 
-
-## Selective Inference
-
-- Infinite values is an issue
-
-```{r}
-library(selectiveInference)
-library(glmnet)
-
-# set.seed(my_seed)
-
-# cv_res <- cv.ncvreg(dat$X, dat$y, penalty = "lasso")
-cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
-(lam <- cv_res$lambda.min)
-# lam <- 0.01708248
-
-fit <- glmnet(dat$X, dat$y, standardize = FALSE)
-b <- coef(fit, s = lam)[-1]
-sh <- estimateSigma(dat$X, dat$y)$sigmahat  # About 0.4 or 0.45
-res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), sigma=sh, alpha = .2)
-bb <- res$vmat %*% dat$y
-B <- cbind(bb, res$ci, res$pv)
-rownames(B) <- names(res$vars)
-B <- B[is.finite(B[,2]) & is.finite(B[,3]),]
-B <- B[order(desc(abs(B[,1]))),][1:30,]
-CIplot(B, sort=FALSE, mar=c(4, 5, 1, 5), xlab=expression(beta))
-```
 
 ## pollution
 
@@ -336,40 +253,143 @@ pollution <- eb_boot(dat = dat, type = "univariate", time = TRUE)
 
 plot_boot(pollution)
 ```
+## whoari
+
+```{r}
+dat <- readData(whoari)
+
+set.seed(my_seed)
+whoari <- eb_boot(dat = dat, type = "univariate", time = TRUE)
+
+plot_boot(whoari, n = 20)
+```
+
+# Comparison Methods
 
 ## whoari
 
 ```{r}
 dat <- readData(whoari)
-# dat$X <- ncvreg::std(dat$X)
-
-set.seed(my_seed)
-whoari <- eb_boot(dat = dat, type = "univariate", time = TRUE)
-
-plot_boot(whoari, n = 66)
+dat$X <- std(dat$X)
 ```
 
-# Selective Inference
+
+### Selective Inference
+
+- Tends to produce infinite values
+
+```{r}
+library(selectiveInference)
+library(glmnet)
+
+set.seed(my_seed)
+cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
+(lam <- cv_res$lambda.min)
+
+fit <- cv_res$glmnet.fit
+b <- coef(fit, s = lam)[-1]
+sh <- estimateSigma(dat$X, dat$y)$sigmahat  # About 0.4 or 0.45
+res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), sigma=sh, alpha = .2)
+bb <- res$vmat %*% dat$y
+B <- cbind(bb, res$ci, res$pv)
+rownames(B) <- names(res$vars)
+B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
+si_whoari <- B %>%
+  data.frame(method = "Selective Inference", variable = rownames(B)) %>%
+  rename(estimate = X1, lower = X2, upper = X3)
+# B <- B[order(desc(abs(B[,1]))),][1:30,]
+# CIplot(B, sort=FALSE, mar=c(4, 5, 1, 5), xlab=expression(beta))
+```
+
+## HDI
+
+- Seems slow / fragile so far (error on Rhee)
+- There is also a non-bootstrap version I can consider
+
+```{r}
+library(hdi)
+
+fit.lasso.allinfo <- boot.lasso.proj(dat$X, dat$y, return.bootdist = TRUE)
+ci_hdi <- confint(fit.lasso.allinfo, level = 0.8)
+
+hdi_whoari <- ci_hdi %>%
+  data.frame(method = "BLP", variable = rownames(ci_hdi)) %>%
+  mutate(estimate = (lower + upper) / 2)
+```
+
+## Lasso Boot
+
+```{r}
+set.seed(my_seed)
+whoari <- eb_boot(dat = dat, type = "univariate", time = FALSE)
+
+lassoboot_whoari <- boot_ci(whoari)
+```
+
+## Comparison
+
+```{r}
+ci_df <- bind_rows(si_whoari, hdi_whoari, lassoboot_whoari)
+
+gg <- plot_ci_comparison(ci_df)
+gg + coord_cartesian(xlim=c(-.25, .5))
+```
+
 
 ## Generated Data
 
 ```{r}
-# set.seed(my_seed)
+set.seed(my_seed)
 dat <- genDataABN(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 60, a = 6, b = 2, n = 100)
-
-X.std <- std(dat$X)
-y <- dat$y
-cv_res <- cv.glmnet(X.std, y, standardize=FALSE)
-(lam <- cv_res$lambda.min)
-fit <- cv_res$glmnet.fit
-b <- coef(fit, s=lam)[-1]
-
-sh <- estimateSigma(X.std, y)$sigmahat  # About 0.4 or 0.45
-res <- fixedLassoInf(X.std, y, b, lam*length(y), sigma=sh, alpha = .2)
-bb <- res$vmat %*% y
-B <- cbind(bb, res$ci, res$pv)
-rownames(B) <- names(res$vars)
-CIplot(B, sort=FALSE, mar=c(4, 5, 1, 5), xlab=expression(beta))
+dat$X <- std(dat$X)
 ```
 
+### Selective Inference
+
+```{r}
+set.seed(my_seed)
+cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
+lam <- cv_res$lambda.min
+
+fit <- cv_res$glmnet.fit
+b <- coef(fit, s = lam)[-1]
+sh <- estimateSigma(dat$X, dat$y)$sigmahat
+res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), sigma=sh, alpha = .2)
+bb <- res$vmat %*% dat$y
+B <- cbind(bb, res$ci, res$pv)
+rownames(B) <- names(res$vars)
+B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
+si_abn <- B %>%
+  data.frame(method = "Selective Inference", variable = rownames(B)) %>%
+  rename(estimate = X1, lower = X2, upper = X3)
+```
+
+## HDI
+
+```{r}
+fit.lasso.allinfo <- boot.lasso.proj(dat$X, dat$y, return.bootdist = TRUE)
+ci_hdi <- confint(fit.lasso.allinfo, level = 0.8)
+
+hdi_abn <- ci_hdi %>%
+  data.frame(method = "BLP", variable = rownames(ci_hdi)) %>%
+  mutate(estimate = (lower + upper) / 2)
+```
+
+## Lasso Boot
+
+```{r}
+set.seed(my_seed)
+abn <- eb_boot(dat = dat, type = "univariate", time = FALSE)
+
+lassoboot_abn <- boot_ci(abn)
+```
+
+## Comparison
+
+```{r}
+ci_df <- bind_rows(si_abn, hdi_abn, lassoboot_abn)
+
+gg <- plot_ci_comparison(ci_df)
+gg + coord_cartesian(xlim=c(-3, 3))
+```
 
