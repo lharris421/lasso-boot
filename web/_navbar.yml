@@ -1,8 +1,4 @@
 title: "Dissertation Work"
 left:
-  - text: "EB Bootstrap Methods"
-    href: emperical_bayes.html
-  - text: "EB Bootstrap Methods - CV Once"
-    href: emperical_bayes_cv_once.html
-  - text: "Meeting Notes"
-    href: meeting_notes.html
+  - text: "ncvreg implimentation"
+    href: ncvreg_implimentation.html

@@ -9,7 +9,12 @@ library(ggplot2)
 library(plotly)
 library(tictoc)
 library(statmod)
+library(magrittr)
+library(hdrm)
+library(selectiveInference)
+library(hdi)
 set.seed(1234)
+my_seed <- 189807771
 knitr::opts_chunk$set(
   cache = FALSE, 
   collapse = FALSE,

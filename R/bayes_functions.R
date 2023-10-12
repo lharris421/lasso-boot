@@ -363,6 +363,11 @@ boot_ci <- function(eb_boot) {
   rm_lower <- rm_lower[rm_lower != 0]
   rm_upper <- rm_upper[rm_upper != 0]
 
+  if (length(rm_lower) > 0 ) {
+    print(paste0(length(rm_lower), " total variables with NA entries, summary: "))
+    print(summary(rm_lower))
+  }
+
   lowers <- apply(eb_boot[["lower"]], 2, mean, na.rm = TRUE)
   uppers <- apply(eb_boot[["upper"]], 2, mean, na.rm = TRUE)
 

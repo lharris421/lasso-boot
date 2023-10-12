@@ -10,8 +10,6 @@ output:
 
 
 ```{r}
-source("./R/bayes_functions.R")
-
 my_seed <- 189807771
 ```
 
@@ -21,25 +19,15 @@ my_seed <- 189807771
 
 ### Single Interval
 
-#### Original
+#### ncvreg
 
 ```{r}
 set.seed(my_seed)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "original", time = TRUE)
-
-int_b0_O <- c(mean(tmp$lower), mean(tmp$upper))
+dat <- genData(n = 30, p = 1, p1 = 1, beta = 0)
+res <- boot.ncvreg(dat$X, dat$y)
+ci.boot.ncvreg(res)
 ```
 
-#### Univariate
-
-```{r}
-set.seed(my_seed)
-tmp <- eb_boot(beta = 0, p = 1, b = 0, n = 30, nboot = 100, type = "univariate", time = TRUE)
-
-(int_b0_U <- c(mean(tmp$lower), mean(tmp$upper)))
-```
-
-[1] -0.6897276 -0.1468678
 
 ### Coverage
 
@@ -393,3 +381,58 @@ gg <- plot_ci_comparison(ci_df)
 gg + coord_cartesian(xlim=c(-3, 3))
 ```
 
+# Function check
+
+```{r}
+dat <- readData(whoari)
+# dat$X <- std(dat$X)
+```
+
+
+## Using cv.ncvreg as argument
+
+```{r}
+set.seed(my_seed)
+tmp <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", returnX = TRUE)
+tic()
+tst1 <- boot.ncvreg(cvncvreg = tmp)
+toc()
+tst1_ci <- ci.boot.ncvreg(tst1)
+```
+
+
+```{r}
+plot.boot.ncvreg(tst1)
+```
+
+
+## Specifying data directly
+
+```{r}
+set.seed(my_seed)
+tic()
+tst2 <- boot.ncvreg(dat$X, dat$y)
+toc()
+tst2_ci <- ci.boot.ncvreg(tst2)
+```
+
+```{r}
+mean(abs(tst1$modes - tst2$modes) < 1e-12 | (is.na(tst1$modes) & is.na(tst2$modes)))
+mean(abs(tst1$lowers - tst2$lowers) < 1e-12 | (is.na(tst1$lowers) & is.na(tst2$lowers)))
+mean(abs(tst1$uppers - tst2$uppers) < 1e-12 | (is.na(tst1$uppers) & is.na(tst2$uppers)))
+```
+
+## Using original function
+
+```{r}
+set.seed(my_seed)
+tic()
+tst3 <- eb_boot(dat = dat)
+toc()
+tst3_ci <- boot_ci(tst3)
+```
+
+```{r}
+mean(abs(tst1$lowers - tst3$lower) < 1e-12 | (is.na(tst1$lowers) & is.na(tst3$lower)))
+mean(abs(tst1$uppers - tst3$upper) < 1e-12 | (is.na(tst1$uppers) & is.na(tst3$upper)))
+```
