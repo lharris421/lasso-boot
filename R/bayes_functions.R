@@ -182,8 +182,8 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
     y <- dat$y
     p <- ncol(X)
     n <- length(y)
-
-    # if (lambda == "cv_once") {
+    tbeta <- dat$beta
+    if (lambda == "cv_once") {
 
       if (time) tic(msg = "Cross Validation")
       cv_res <- cv.ncvreg(X, y, penalty = "lasso")
@@ -194,7 +194,16 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
 
       tbeta <- coef(cv_res$fit, lambda = lam)[-1]
 
-    #}
+    } else {
+      cv_res <- cv.ncvreg(X, y, penalty = "lasso")
+      lam <- lambda
+      ind <- stats::approx(cv_res$lambda, seq(cv_res$lambda), lambda)$y
+      l <- floor(ind)
+      r <- ceiling(ind)
+      w <- ind %% 1
+      sigma2 <- (1-w)*cv_res$cve[l] + w*cv_res$cve[r]
+      rate <- (lam*n / sigma2)
+    }
 
   }
 
@@ -211,7 +220,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
     xnew <- X[idx_new,,drop=FALSE]
     xnew <- ncvreg::std(xnew)
 
-    if (lambda == "cv_once") {
+    if (lambda == "cv_once" | is.numeric(lambda)) {
       lambda_max <- max(apply(xnew, 2, find_thresh, ynew))
       lambda_min <- lam - lam / 100 ## set min to be slightly smaller
       if (lambda_min > lambda_max | lam > lambda_max) {
@@ -280,7 +289,7 @@ eb_boot <- function(beta, p = 60, b = 2, n = 100, nboot = 100, significance_leve
         ## Need to compress this into a single call in future
         if (type == "original") {
 
-          bounds <- (post_quant(significance_level, post_mode, sigma, rate, xvar, partial_residuals, ynew) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[idx])^(-1)
+          bounds <- (post_quant(significance_level, post_mode, sqrt(sigma2), rate, xvar, partial_residuals, ynew) + sign(post_mode)*debias*lam*(abs(post_mode) > lam)) * (attr(xnew, "scale")[idx])^(-1)
 
         } else if (type == "normal") {
 

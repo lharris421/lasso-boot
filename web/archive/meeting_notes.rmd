@@ -1,5 +1,5 @@
 ---
-title: "Meeting Notes"
+title: "Notes"
 output:
   html_document:
     code_folding: hide
@@ -9,6 +9,7 @@ output:
 
 # Running To-Do
 
+- [] Do computation on log scale
 - [ ] Implement method where bootstrap is also used to select lambda
 - [ ] Figure out AWS bucket sharing
   - [x] Read: https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-walkthroughs-managing-access-example2.html
@@ -19,16 +20,10 @@ output:
   - [ ] json bucket policy generating function
 - [ ] Read Gaussian Mirrors paper: https://doi.org/10.1080/01621459.2021.1923510
 - [ ] Look at Univariate example when Beta is very small, say, beta = .01
-- [ ] Consider HPD method of interval finding
-- [ ] Speed up GenDataABN
+- [x] Consider HPD method of interval finding
+- [ ] Speed up GenDataABN based on Patrick's updated to genData
 - [ ] Add a global .gitignore
-- [ ] Make better method names
-- [x] Look into faster versions of integration for univariate (grid, Guass Hermite, Huber loss)
- - Grid didn't seem viable, but I have a fast solution now anyway
-- [x] Combine two sets of functions together (clean up)
-- [x] Profile code to see what is expensive in the Bayesian bootstrap
-- [x] Create mre for "Error: Supplied lambda value(s) are outside the range of the model fit."
-  - In process of creating realized the mistakes I was making
+- [ ] Profile code in ncvreg to see what is expensive in the Bayesian bootstrap
   
 # Literature Search
 
@@ -56,21 +51,7 @@ output:
 - May need to make an argument about the width of the intervals alongside our argument that bias is okay
   - Consider interval width assuming known value of $\sigma^2$
 
-# Week of Monday, September 25th
-
-- I continue to have difficulty with AWS Login with V2
-- I did figure out issue was having with "univariate" version, but now is superceeded
-- Found that the marginal posterior is just a mixture of truncated normals
-
-# Week of Monday, September 11th, 2023
-
-- Running into issues when applied to real data:
-  - NAs occur when the bootstrap sample ends up with columns that are nonsingular (I just skip over them for now)
-- MRE findings
-  - I just had to heavily guide the lambda sequence
-- CV first and once (seems promising)
-
-# General notes
+# General comments
 
 **U - shape coverage**: The reasoning for this seems to be that with a true value of zero, coverage is high as the penalization draws the estimates towards zero. For coefficients with small true values, they are susceptible to also being shrunk entirely to zero and they are effected by shrinkage in general. Although coefficients that are truly large also suffer from shrinkage, they are less likely to be drawn entirely to zero which is why we seem somewhat of a stabilization effect in the coverage.
 

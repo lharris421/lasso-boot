@@ -15,7 +15,94 @@ output:
 ## githubinstall::gh_install_packages("breheny/ncvreg", ref = "bootstrap")
 ```
 
-# Other Functions
+
+# The posterior
+
+## Set up
+
+```{r}
+dlaplace <- function(x, rate = 1, log = FALSE) {
+  if (log) {
+    dexp(abs(x), rate, log = TRUE) - log(2)
+  } else {
+    dexp(abs(x), rate) / 2 
+  }
+}
+dlik <- function(x, z, sigma2, n, log = FALSE) {
+  if (log) {
+    -(n/2*sigma2)*(x - z)^2
+  } else {
+    exp(-(n/2*sigma2)*(x - z)^2)
+  }
+}
+dpost <- function(x, z, sigma2, n, lambda, log = FALSE) {
+  rate <- (lambda*n / sigma2)
+  if (log) {
+    return(dlaplace(x, rate = rate, log = TRUE) + dlik(x, z, sigma2, n, log = TRUE))
+  } else {
+    return(dlaplace(x, rate = rate) * dlik(x, z, sigma2, n))
+  }
+}
+```
+
+## lambda = 1, sigma2 = 1, n = 100 (posterior)
+
+```{r}
+zs <- c(0, .5, 1, 1.2, 1.5, 2)
+lambda <- 1
+sigma2 <- 1
+n <- 100
+x <- seq(-1, 1, by = .001)
+
+for (z in zs) {
+  dense <- dpost(x, z, sigma2, n, lambda)
+  plot(x, dense, type = "l") 
+}
+```
+
+## n = 10000 (log - posterior)
+
+```{r}
+n <- 10000
+x <- seq(-1, 1, by = .01)
+
+for (z in zs) {
+  dense <- dpost(x, z, sigma2, n, lambda, log = TRUE)
+  plot(x, dense, type = "l") 
+}
+```
+
+# Comparison to Using Integrate (at lambda_max)
+
+```{r}
+set.seed(my_seed)
+dat <- hdrm::genDataABN(n = 40, p = 60, a = 6, b = 2, beta = c(-2, -1, -0.5, 0.5, 1, 2))
+
+lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
+lambda_max <- lambda_max - lambda_max*.01
+set.seed(my_seed)
+boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_max)
+ci_new <- ncvreg:::ci.boot.ncvreg(boot_res) %>%
+  dplyr::select(variable, lower, upper)
+```
+
+
+```{r}
+set.seed(my_seed)
+tmp_orig <- eb_boot(dat = dat, type = "original", lambda = lambda_max)
+names(tmp_orig) <- c("lowers", "uppers", "estimates")
+ci_old <- ncvreg:::ci.boot.ncvreg(tmp_orig) %>%
+  dplyr::select(variable, lower_old = lower, upper_old = upper)
+```
+
+```{r}
+ci_new %>%
+  left_join(ci_old, by = "variable")
+```
+
+
+
+# Supporting Functions
 
 ## Bootstrap Simulation
 
@@ -92,7 +179,7 @@ plot_ci_comparison <- function(ci_df, nvars = 30) {
 ```{r}
 set.seed(my_seed)
 dat <- gen_data(n = 30, p = 1, beta = 0)
-res <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
+res <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, seed = 1234)
 ci.boot.ncvreg(res)
 ```
 
@@ -162,25 +249,42 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 ```{r}
 set.seed(my_seed)
 dat <- hdrm::genDataABN(n = 100, p = 60, a = 6, b = 2, beta = c(-2, -1, -0.5, 0.5, 1, 2))
+# dat <- gen_data(n = 100, p = 60, beta = c(-2, -1, -0.5, 0.5, 1, 2, rep(0, 54)))
+
 
 lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
 lambda_min <- lambda_max * 0.001
 lambda_max <- lambda_max - lambda_max*.01
 lambda_min <- lambda_min + lambda_min*.01
 lambda_seq <- 10^(seq(log(lambda_max, 10), log(lambda_min, 10), length.out = 10))
+```
 
+
+## Variance = 1
+
+```{r}
 res <- list()
 for (i in 1:length(lambda_seq)) {
-  boot_res <- ncvreg:::boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i])
+  boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i], sigma2 = 1)
   res[[i]] <- ncvreg:::ci.boot.ncvreg(boot_res) %>%
     dplyr::mutate(width = upper - lower, lambda = lambda_seq[i]) %>%
     dplyr::select(variable, width, lambda, estimate) 
 }
-```
 
-```{r}
-truth <- data.frame(variable = names(dat$beta), truth = as.character(abs(dat$beta)))
+truth <- data.frame(variable = names(dat$beta), truth = as.character(abs(dat$beta)), sign = sign(dat$beta))
 red_res <- res
+
+do.call("rbind", red_res) %>%
+  left_join(truth) %>%
+  ggplot(aes(x = lambda, y = width * sign, color = truth)) +
+  geom_point(alpha = .6) +
+  scale_x_continuous(
+    trans = 'log10' 
+  ) +
+  xlab("Lambda") + ylab("Interval Width") +
+  theme_bw() +
+  scale_color_discrete(name = expression(abs(beta)))
+
 
 do.call("rbind", red_res) %>%
   left_join(truth) %>%
@@ -193,6 +297,115 @@ do.call("rbind", red_res) %>%
   theme_bw() +
   scale_color_discrete(name = expression(abs(beta)))
 ```
+
+## Variance estimated using CV
+
+```{r}
+res <- list()
+for (i in 1:length(lambda_seq)) {
+  boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i])
+  res[[i]] <- ncvreg:::ci.boot.ncvreg(boot_res) %>%
+    dplyr::mutate(width = upper - lower, lambda = lambda_seq[i]) %>%
+    dplyr::select(variable, width, lambda, estimate) 
+}
+
+truth <- data.frame(variable = names(dat$beta), truth = as.character(abs(dat$beta)), sign = sign(dat$beta))
+red_res <- res
+
+do.call("rbind", red_res) %>%
+  left_join(truth) %>%
+  ggplot(aes(x = lambda, y = width * sign, color = truth)) +
+  geom_point(alpha = .6) +
+  scale_x_continuous(
+    trans = 'log10' 
+  ) +
+  xlab("Lambda") + ylab("Interval Width") +
+  theme_bw() +
+  scale_color_discrete(name = expression(abs(beta)))
+
+
+do.call("rbind", red_res) %>%
+  left_join(truth) %>%
+  ggplot(aes(x = lambda, y = width, color = truth)) +
+  geom_jitter(alpha = .6, width = .05) +
+  scale_x_continuous(
+    trans = 'log10' 
+  ) +
+  xlab("Lambda") + ylab("Interval Width") +
+  theme_bw() +
+  scale_color_discrete(name = expression(abs(beta)))
+```
+
+# Profiling
+
+```{r}
+set.seed(my_seed)
+dat <- gen_data(n = 100, p = 6000, beta = c(-2, -1, -0.5, 0.5, 1, 2, rep(0, 5994)))
+tmp <- boot.ncvreg(dat$X, dat$y, time = TRUE)
+```
+
+# Beta = 0 + epsilon
+
+## Single Example
+
+```{r}
+set.seed(my_seed)
+dat <- gen_data(n = 100, p = 60, beta = c(-2, -1, -0.5, 0.5, 1, 2, 0 + 1e-4 * sample(c(-1, 1), 54, replace = TRUE)))
+plot(boot.ncvreg(dat$X, dat$y, verbose = FALSE))
+```
+
+
+## Coverage
+
+```{r}
+set.seed(my_seed)
+res <- boot_sim(beta = c(-2, -1, -0.5, 0.5, 1, 2, 0 + 1e-4 * sample(c(-1, 1), 54, replace = TRUE)))
+```
+
+#### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_coverage)
+hist(res$overall_coverage, xlab = "Coverage", main ="")
+```
+
+#### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$individual_coverage, 2, mean) , beta = res$beta)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+
+# Beta = 0 + epsilon, large n, larger p
+
+## Single Example
+
+### Plot
+
+```{r}
+set.seed(my_seed)
+beta0_eps <- 1e-4 * sample(c(-1, 1), 1994, replace = TRUE)
+dat <- gen_data(n = 1000, p = 2000, beta = c(-2, -1, -0.5, 0.5, 1, 2, beta0_eps))
+tmp <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, time = TRUE)
+plot(tmp)
+```
+
+### Widths
+
+```{r}
+tmp_ci <- ci.boot.ncvreg(tmp)
+min(tmp_ci$upper - tmp_ci$lower)
+max(tmp_ci$upper - tmp_ci$lower)
+```
+
+### Epsilon Coverage
+
+```{r}
+mean(c((tmp_ci$upper[-c(1:6)] >= beta0_eps) & (tmp_ci$lower[-c(1:6)] <= beta0_eps)))
+```
+
+
 
 # Comparison to Other Methods
 
@@ -251,102 +464,4 @@ ci_df <- bind_rows(si_abn, hdi_abn, lassoboot_abn)
 
 gg <- plot_ci_comparison(ci_df)
 gg + coord_cartesian(xlim=c(-3, 3))
-```
-
-# Function Checks
-
-## Unstandardized X
-
-```{r}
-set.seed(my_seed)
-dat <- genDataABN(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 60, a = 6, b = 2, n = 100)
-```
-
-
-### Using cv.ncvreg as argument
-
-```{r}
-set.seed(my_seed)
-tmp <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", returnX = TRUE)
-tst1 <- boot.ncvreg(cvncvreg = tmp)
-tst1_ci <- ci.boot.ncvreg(tst1)
-```
-
-
-### Specifying data directly
-
-```{r}
-set.seed(my_seed)
-tst2 <- boot.ncvreg(dat$X, dat$y)
-tst2_ci <- ci.boot.ncvreg(tst2)
-```
-
-### Same?
-
-```{r}
-mean(abs(tst1$modes - tst2$modes) < 1e-12 | (is.na(tst1$modes) & is.na(tst2$modes)))
-mean(abs(tst1$lowers - tst2$lowers) < 1e-12 | (is.na(tst1$lowers) & is.na(tst2$lowers)))
-mean(abs(tst1$uppers - tst2$uppers) < 1e-12 | (is.na(tst1$uppers) & is.na(tst2$uppers)))
-```
-
-### Using function from before migration
-
-```{r}
-set.seed(my_seed)
-tst3 <- eb_boot(dat = dat)
-tst3_ci <- boot_ci(tst3)
-```
-
-### Same?
-
-```{r}
-mean(abs(tst1$lowers - tst3$lower) < 1e-12 | (is.na(tst1$lowers) & is.na(tst3$lower)))
-mean(abs(tst1$uppers - tst3$upper) < 1e-12 | (is.na(tst1$uppers) & is.na(tst3$upper)))
-```
-
-## Standardized X
-
-```{r}
-dat$X <- std(dat$X)
-```
-
-### Using cv.ncvreg as argument
-
-```{r}
-set.seed(my_seed)
-tmp <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", returnX = TRUE)
-tst1 <- boot.ncvreg(cvncvreg = tmp)
-tst1_ci <- ci.boot.ncvreg(tst1)
-```
-
-
-### Specifying data directly
-
-```{r}
-set.seed(my_seed)
-tst2 <- boot.ncvreg(dat$X, dat$y)
-tst2_ci <- ci.boot.ncvreg(tst2)
-```
-
-### Same?
-
-```{r}
-mean(abs(tst1$modes - tst2$modes) < 1e-12 | (is.na(tst1$modes) & is.na(tst2$modes)))
-mean(abs(tst1$lowers - tst2$lowers) < 1e-12 | (is.na(tst1$lowers) & is.na(tst2$lowers)))
-mean(abs(tst1$uppers - tst2$uppers) < 1e-12 | (is.na(tst1$uppers) & is.na(tst2$uppers)))
-```
-
-### Using function from before migration
-
-```{r}
-set.seed(my_seed)
-tst3 <- eb_boot(dat = dat)
-tst3_ci <- boot_ci(tst3)
-```
-
-### Same?
-
-```{r}
-mean(abs(tst1$lowers - tst3$lower) < 1e-12 | (is.na(tst1$lowers) & is.na(tst3$lower)))
-mean(abs(tst1$uppers - tst3$upper) < 1e-12 | (is.na(tst1$uppers) & is.na(tst3$upper)))
 ```
