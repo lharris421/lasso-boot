@@ -2,3 +2,5 @@ title: "Dissertation Work"
 left:
   - text: "ncvreg implimentation"
     href: ncvreg_implimentation.html
+  - text: "Paper topics"
+    href: lasso_boot_paper.html
