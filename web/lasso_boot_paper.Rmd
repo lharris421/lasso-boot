@@ -110,7 +110,7 @@ plot_ci_comparison <- function(ci_df, nvars = 30) {
 
 # Questions
 
-- Data simulation methods
+- Data simulation methods: Laplace beta under independence
 
 # Distribution of Beta: Sparse / Dense
 
@@ -450,7 +450,7 @@ set.seed(my_seed)
 n <- 100
 dat <- genDataABN(n = n, p = 3, a = 1, b = 1, rho = .99, beta = 1)
 # dat$X <- std(dat$X)
-alphas <- c(0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999)
+alphas <- c(0.000000001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999)
 min_cve <- numeric(length(alphas))
 min_lambdas <- numeric(length(alphas))
 
@@ -489,6 +489,19 @@ univariate_soft_threshold <- function(z_j, lambda) {
   
 }
 
+univariate_ridge_threshold <- function(z_j, lambda, alpha) {
+
+    if (z_j > lambda*alpha) {
+      return((z_j - lambda*alpha) / (1 + lambda*(1-alpha)))
+    } else if (abs(z_j) <= lambda*alpha) {
+      return(0)
+    } else if (z_j < -lambda*alpha) {
+      return((z_j + lambda) / (1 + lambda*(1-alpha)))
+    }
+  
+}
+
+
 convergence_check <- function(beta, beta_prev, tol = 1e-12) {
   
   all(abs((beta - beta_prev) / (beta_prev + tol)) < tol)
@@ -513,9 +526,18 @@ lasso_cd_lambda <- function(X, y, curr_lambda, init, alpha) {
     
       for (j in 1:ncol(X)) {
         
-        z_j <- (t(X[,j]) %*% r_j / n) + beta[j]
-        beta[j] <- univariate_soft_threshold(z_j, l1)
-        r_j <- r_j - (beta[j] - beta_prev[j]) * X[,j]
+        # z_j <- (t(X[,j]) %*% r_j / n) + beta[j]
+        # beta[j] <- univariate_soft_threshold(z_j, l1)
+        # r_j <- r_j - (beta[j] - beta_prev[j]) * X[,j]
+        if (iter == 0) {
+          z_j <- (t(X[,j]) %*% r_j / n) + beta[j] ## First step ignores augmented data essentially
+          beta[j] <- univariate_soft_threshold(z_j, l1) / (1 + l2)
+          r_j <- r_j - (beta[j] - beta_prev[j]) * X[,j] 
+        } else {
+          z_j <- (t(X[,j]) %*% r_j / n) + beta[j] ## First step ignores augmented data essentially
+          beta[j] <- univariate_soft_threshold(z_j, l1) # / (1 + l2)
+          r_j <- r_j - (beta[j] - beta_prev[j]) * X[,j]
+        }
         
       } 
     
@@ -525,6 +547,7 @@ lasso_cd_lambda <- function(X, y, curr_lambda, init, alpha) {
       
     }
     
+    print(beta)
     return(beta)
   
 }
@@ -546,7 +569,6 @@ lasso_cd <- function(X, y, original_scale = TRUE, alpha = 1) {
   rownames(res) <- c("Intercept", colnames(X_std))
   
   for (i in 1:length(lambda_seq)) {
-
     if (i == 1) { init <- rep(0, ncol(X_std)) } else { init <- beta }
 
     curr_lambda <- lambda_seq[i] ## OVERALL LAMBA
@@ -565,10 +587,10 @@ lasso_cd <- function(X, y, original_scale = TRUE, alpha = 1) {
 #### Augmented Method
 
 ```{r}
-alpha <- .3
+alpha <- .0001
 tmp <- lasso_cd(dat$X, dat$y, alpha = alpha)
-tmp[,50]
-lam <- as.numeric(colnames(tmp)[50])
+tmp[,100]
+lam <- as.numeric(colnames(tmp)[100])
 ## lambdas <- as.numeric(colnames(tmp))
 ```
 
@@ -601,13 +623,10 @@ coef(direct, lambda = lam*alpha)[-1] / attr(X_aug, "scale")
 X <- dat$X
 y <- dat$y
 significance_level <- .8
-# lambda <- lam
-# alpha <- .01
-# sigma2 <- 1
 
-alpha <- alphas[1]
-lambda <- min_lambdas[1]
-sigma2 <- min_cve[1]
+alpha <- 1e-12
+lambda <- 10
+sigma2 <- 1.341164
 
 lower_p <- (1 - significance_level) / 2
 upper_p <- significance_level + lower_p
@@ -635,6 +654,7 @@ modes <- coefs[-1] ## Coefs only returned for nonsingular columns of X
 xnew <- rbind(xnew, diag(ncol(xnew)) * sqrt(n*(1-alpha)*lambda))
 ynew <- c(ynew, rep(0, ncol(xnew)))
 
+## Point out
 partial_residuals <-  ynew - (coefs[1] + as.numeric(xnew %*% modes) - (xnew * matrix(modes, nrow=nrow(xnew), ncol=ncol(xnew), byrow=TRUE)))
 
 z <- (1/n)*colSums(xnew * partial_residuals)
@@ -669,31 +689,32 @@ upper <- ifelse(
   qnorm(log(lower_p) + obs_up - frac_up_log, (z - lambda*alpha) / (lambda*(1-alpha)), se, lower.tail = FALSE, log.p = TRUE)
 )
 
-rescale_original <- FALSE
-rescale <- (attr(xnew_save, "scale")[ns_index])^(-1)
-if (!is.null(attr(X, "scale")) & rescale_original) {
-  rescaleX <-  (attr(X, "scale")[ns_index])^(-1)
-} else {
-  rescaleX <- 1
-}
-
-lowers[ns_index] <- (lower * rescale) * rescaleX
-uppers[ns_index] <- (upper * rescale) * rescaleX
-modes[ns_index] <- (modes * rescale) * rescaleX
-lowers[!(1:length(lowers) %in% ns_index)] <- NA
-uppers[!(1:length(uppers) %in% ns_index)] <- NA
-modes[!(1:length(modes) %in% ns_index)] <- NA
-
-ret <- list(lowers, uppers, modes)
+# rescale_original <- FALSE
+# rescale <- (attr(xnew_save, "scale")[ns_index])^(-1)
+# if (!is.null(attr(X, "scale")) & rescale_original) {
+#   rescaleX <-  (attr(X, "scale")[ns_index])^(-1)
+# } else {
+#   rescaleX <- 1
+# }
+# 
+# lowers[ns_index] <- (lower * rescale) * rescaleX
+# uppers[ns_index] <- (upper * rescale) * rescaleX
+# modes[ns_index] <- (modes * rescale) * rescaleX
+# lowers[!(1:length(lowers) %in% ns_index)] <- NA
+# uppers[!(1:length(uppers) %in% ns_index)] <- NA
+# modes[!(1:length(modes) %in% ns_index)] <- NA
+# 
+# ret <- list(lowers, uppers, modes)
+ret <- list(lower, upper, modes)
 names(ret) <- c("lowers", "uppers", "modes")
 ret
 ```
 
 
 ```{r}
-tmp_ridge <- hdrm::ridge(dat$X, dat$y)
-coef(tmp_ridge, lambda = lambda*(1-alpha))
-confint(tmp_ridge, level = .8, lambda = lambda*(1-alpha))
+tmp_ridge <- hdrm::ridge(xnew, ynew)
+coef(tmp_ridge, lambda = 10)
+confint(tmp_ridge, level = .8, lambda = 10)
 ```
 
 

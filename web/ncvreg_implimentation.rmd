@@ -219,9 +219,13 @@ mean(boot_sim(beta = 3, n = 30, p = 1)$overall_coverage)
 ```{r}
 set.seed(my_seed)
 dat <- genDataABN(beta = c(2, 1, 0.5, -2, -1, -0.5), n = 100, p = 60, a = 6, b = 2)
-plot(boot.ncvreg(dat$X, dat$y, verbose = FALSE))
+plot(boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = 100))
 ```
 
+```{r}
+set.seed(my_seed)
+ci.boot.ncvreg(boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = 100))
+```
 
 ### Coverage
 
@@ -248,8 +252,8 @@ plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
 
 ```{r}
 set.seed(my_seed)
-dat <- hdrm::genDataABN(n = 100, p = 60, a = 6, b = 2, beta = c(-2, -1, -0.5, 0.5, 1, 2))
-# dat <- gen_data(n = 100, p = 60, beta = c(-2, -1, -0.5, 0.5, 1, 2, rep(0, 54)))
+# dat <- hdrm::gen_data(n = 100, p = 60, a = 6, b = 2, beta = c(-2, -1, -0.5, 0.5, 1, 2))
+dat <- gen_data(n = 100, p = 60, beta = c(-2, -1, -0.5, 0.5, 1, 2, rep(0, 54)))
 
 
 lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
@@ -274,16 +278,16 @@ for (i in 1:length(lambda_seq)) {
 truth <- data.frame(variable = names(dat$beta), truth = as.character(abs(dat$beta)), sign = sign(dat$beta))
 red_res <- res
 
-do.call("rbind", red_res) %>%
-  left_join(truth) %>%
-  ggplot(aes(x = lambda, y = width * sign, color = truth)) +
-  geom_point(alpha = .6) +
-  scale_x_continuous(
-    trans = 'log10' 
-  ) +
-  xlab("Lambda") + ylab("Interval Width") +
-  theme_bw() +
-  scale_color_discrete(name = expression(abs(beta)))
+# do.call("rbind", red_res) %>%
+#   left_join(truth) %>%
+#   ggplot(aes(x = lambda, y = width * sign, color = truth)) +
+#   geom_point(alpha = .6) +
+#   scale_x_continuous(
+#     trans = 'log10' 
+#   ) +
+#   xlab("Lambda") + ylab("Interval Width") +
+#   theme_bw() +
+#   scale_color_discrete(name = expression(abs(beta)))
 
 
 do.call("rbind", red_res) %>%
@@ -340,7 +344,7 @@ do.call("rbind", red_res) %>%
 
 ```{r}
 set.seed(my_seed)
-dat <- gen_data(n = 100, p = 6000, beta = c(-2, -1, -0.5, 0.5, 1, 2, rep(0, 5994)))
+dat <- gen_data(n = 10000, p = 600, beta = c(-2, -1, -0.5, 0.5, 1, 2, rep(0, 594)))
 tmp <- boot.ncvreg(dat$X, dat$y, time = TRUE)
 ```
 
