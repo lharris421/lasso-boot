@@ -46,3 +46,6 @@ po/*~
 rsconnect/
 *data/
 storage/
+
+# Local R library
+local/
