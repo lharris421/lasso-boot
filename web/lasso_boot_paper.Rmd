@@ -303,7 +303,10 @@ mean(ci$lower <= ec$beta & ec$beta <= ci$upper)
 - Ask about hdrm data
 
 ```{r, eval = FALSE}
+.libPaths("./local")
+library(ncvreg)
 hdrm::downloadData()
+hdrm::readData(whoari)
 ```
 
 

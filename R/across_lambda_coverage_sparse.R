@@ -2,7 +2,8 @@ library(dplyr)
 library(hdrm)
 
 my_seed <- 189807771
-ns <- c(50, 100, 150)
+set.seed(my_seed)
+ns <- c(50, 100, 150, 200)
 plot_res <- list()
 
 for (j in 1:length(ns)) {
@@ -13,7 +14,6 @@ for (j in 1:length(ns)) {
     rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
   }
 
-  set.seed(my_seed)
   sparse_beta <- c(rep(-2, 5), rep(-1, 5), rep(2, 5), rep(1, 5), rep(0, 80))
   dat <- gen_data(n = n, p = 100, beta = sparse_beta)
 
@@ -24,7 +24,7 @@ for (j in 1:length(ns)) {
   cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", lambda.min = 0.001)
   lambda_min <- cv_fit$lambda.min
 
-  if (!(lambda_max %in% lambda_seq)) {
+  if (!any(abs(lambda_min - lambda_seq) < 1e-4)) {
     lambda_seq <- sort(c(lambda_seq, lambda_min), decreasing = TRUE)
   }
 

@@ -1,0 +1,61 @@
+library(glmnet)
+library(tictoc)
+library(selectiveInference)
+library(hdi)
+.libPaths("./local")
+library(ncvreg)
+library(ggplot2)
+library(hdrm)
+library(dplyr)
+
+my_seed <- 189807771
+set.seed(my_seed)
+
+plot_res <- list()
+
+dat <- hdrm::readData(whoari)
+dup <- duplicated(t(dat$X))
+const <- apply(dat$X, 2, function(x) length(unique(x)) == 1)
+dat$X <- dat$X[,!dup & !const]
+dat$X <- ncvreg::std(dat$X)
+# dat$y <- ncvreg::std(dat$y)
+n <- nrow(dat$X)
+p <- ncol(dat$X)
+
+### Selective Inference
+tryCatch({
+  cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
+  lam <- cv_res$lambda.min
+
+  fit <- cv_res$glmnet.fit
+  b <- coef(fit, s = lam, exact = TRUE)[-1]
+  sh <- estimateSigma(dat$X, dat$y)$sigmahat
+  res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), sigma=sh, alpha = .2)
+  bb <- res$vmat %*% dat$y
+  B <- cbind(bb, res$ci, res$pv)
+  rownames(B) <- names(res$vars)
+  B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
+  si_ci <- B %>%
+    data.frame(method = "Selective Inference", variable = rownames(B)) %>%
+    rename(estimate = X1, lower = X2, upper = X3)
+  si_lam <- lam
+}, error = function(e) {si_ci <- si_lam <- NULL})
+
+### HDI - Across a range of lambda values
+fit.lasso.allinfo <- boot.lasso.proj(dat$X, dat$y, return.bootdist = TRUE, B = 100, boot.shortcut = TRUE)
+ci_hdi <- confint(fit.lasso.allinfo, level = 0.8)
+
+hdi_ci <- ci_hdi %>%
+  data.frame(method = "BLP", variable = rownames(ci_hdi)) %>%
+  mutate(estimate = fit.lasso.allinfo$bhat)
+hdi_lam <- fit.lasso.allinfo$lambda
+
+### Lasso-boot
+lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
+lassoboot_ci <- ci.boot.ncvreg(lassoboot)
+lassoboot_lam <- lassoboot$lamdba
+
+plot_res <- list(si_ci, hdi_ci, lassoboot_ci, si_lam, hdi_lam, lassoboot_lam, n, p)
+
+save(plot_res, file = "./rds/method_comparison_real.rds")
+

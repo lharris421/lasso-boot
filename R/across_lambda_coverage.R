@@ -2,8 +2,11 @@ library(dplyr)
 library(hdrm)
 
 rt <- 2
-ns <- c(30, 60, 90)
+ns <- c(30, 60, 90, 120)
 plot_res <- list()
+
+my_seed <- 189807771
+set.seed(my_seed)
 
 for (j in 1:length(ns)) {
 
@@ -14,7 +17,6 @@ for (j in 1:length(ns)) {
     rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
   }
 
-  set.seed(my_seed)
   laplace_beta <- rlaplace(60, rate = rt)
   dat <- gen_data(n = n, p = 60, beta = laplace_beta)
 

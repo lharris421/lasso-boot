@@ -43,7 +43,6 @@ cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso")
 (sigma2 <- cv_fit$cve[cv_fit$min])
 
 ## Results
-set.seed(my_seed)
 boot_res <- matrix(nrow = nboot, ncol = p)
 for (i in 1:nboot) {
 
@@ -57,7 +56,6 @@ mode <- coef(cv_fit$fit, lambda = lambda)[-1]
 trad_res <- data.frame(estimate = mode, lower = ci_lower, upper = ci_upper, variable = names(mode))
 
 ## Ours
-set.seed(my_seed)
 lasso_boot <- boot.ncvreg(dat$X, dat$y, lambda = lambda, verbose = FALSE)
 
 save(dat, trad_res, lasso_boot, file = "./rds/bootstrap_quantile_comparison.rds")
