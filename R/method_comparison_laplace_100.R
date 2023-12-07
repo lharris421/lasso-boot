@@ -109,3 +109,4 @@ for (i in 1:length(ns)) {
 
 }
 
+save(res_time, res_coverage, res_lambda, all_coverages, file = "./rds/method_comparison_laplace_sim_sample.rds")

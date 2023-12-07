@@ -198,7 +198,9 @@ mean(boot_sim(beta = 0, n = 30, p = 1)$overall_coverage)
 ```{r}
 set.seed(my_seed)
 dat <- gen_data(beta = 3, n = 30, p = 1, p1 = 1)
-ci.boot.ncvreg(boot.ncvreg(dat$X, dat$y, verbose = FALSE))
+tmp <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
+tmp$lamdba
+ci.boot.ncvreg(tmp)[c(1, 3, 4)]
 ```
 
 

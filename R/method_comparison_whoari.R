@@ -1,3 +1,4 @@
+rm(list=ls())
 library(glmnet)
 library(tictoc)
 library(selectiveInference)

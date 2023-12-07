@@ -1,5 +1,7 @@
 ## Libraries
+rm(list=ls())
 library(hdrm)
+library(ncvreg)
 
 ## Functions
 find_thresh <- function(x, y) { abs(t(x) %*% y) / length(y) }

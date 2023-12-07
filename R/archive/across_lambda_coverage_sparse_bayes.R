@@ -1,4 +1,4 @@
-# rm(list=ls())
+rm(list=ls())
 library(dplyr)
 .libPaths("./local")
 library(ncvreg)
@@ -12,6 +12,10 @@ plot_res <- list()
 for (j in 1:length(ns)) {
 
   n <- ns[j]
+
+  rlaplace <- function(n, rate = 1) {
+    rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
+  }
 
   sparse_beta <- c(rep(-2, 5), rep(-1, 5), rep(2, 5), rep(1, 5), rep(0, 80))
   dat <- gen_data(n = n, p = 100, beta = sparse_beta)
@@ -29,10 +33,20 @@ for (j in 1:length(ns)) {
 
   res <- list()
   for (i in 1:length(lambda_seq)) {
-    boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i])
-    res[[i]] <- ci.boot.ncvreg(boot_res) %>%
+    tic()
+    bayes_lasso <- blasso(dat$X, dat$y, T = 2000, lambda2 = (lambda_seq[i]*n)^2, s2 = 1, RJ = FALSE, M = ncol(dat$X), verb = 0, rd = FALSE)
+    ci_bayes_lasso <- apply(bayes_lasso$beta[1001:2000,], 2, function(x) quantile(x, c(0.1, 0.5, 0.9)))
+    ci_bayes_lasso <- ci_bayes_lasso %>%
+      t() %>%
+      data.frame() %>%
+      rename("lower" = X10.,"estimate" = X50., "upper" = X90.) %>%
+      mutate(variable = names(dat$beta), method = "Bayes Lasso") %>%
+      select(estimate, variable, lower, upper, method)
+
+    res[[i]] <- ci_bayes_lasso %>%
       dplyr::mutate(width = (upper - lower), lambda = lambda_seq[i]) %>%
       dplyr::select(variable, width, lambda, estimate, lower, upper)
+    toc()
   }
 
   truth <- data.frame(variable = names(dat$beta), truth = as.numeric(dat$beta))
@@ -44,4 +58,4 @@ for (j in 1:length(ns)) {
 
 }
 
-save(plot_res, file = "./rds/across_lambda_coverage_sparse_original.rds")
+save(plot_res, file = "./rds/across_lambda_coverage_sparse_bayes.rds")
