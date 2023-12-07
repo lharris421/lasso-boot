@@ -49,3 +49,6 @@ storage/
 
 # Local R library
 local/
+
+# local rds (now handled by dat)
+/rds
