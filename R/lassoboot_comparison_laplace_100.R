@@ -1,9 +1,11 @@
+rm(list=ls())
+unloadNamespace("ncvreg")
+.libPaths("./local")
+library(ncvreg)
 library(glmnet)
 library(tictoc)
 library(selectiveInference)
 library(hdi)
-# .libPaths("./local")
-library(ncvreg)
 library(ggplot2)
 library(hdrm)
 library(dplyr)
@@ -103,4 +105,4 @@ for (i in 1:length(ns)) {
 
 }
 
-save(res_time, res_coverage, res_lambda, res_width, all_coverages, file = "./rds/method_comparison_lasso_sim.rds")
+save(res_time, res_coverage, res_lambda, res_width, all_coverages, file = "./rds/method_comparison_laplace_100.rds")

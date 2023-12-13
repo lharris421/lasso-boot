@@ -1,9 +1,11 @@
+rm(list=ls())
+unloadNamespace("ncvreg")
+.libPaths("./local")
+library(ncvreg)
 library(glmnet)
 library(tictoc)
 library(selectiveInference)
 library(hdi)
-.libPaths("./local")
-library(ncvreg)
 library(ggplot2)
 library(hdrm)
 library(dplyr)
@@ -20,7 +22,7 @@ ns <- c(20, 30, 60)
 p <- 30
 rt <- 2
 
-res_coverage <- res_time <- res_lambda <- matrix(nrow = 3, ncol = 3)
+res_width <- res_coverage <- res_time <- res_lambda <- matrix(nrow = 3, ncol = 3)
 all_coverages <- list()
 
 for (i in 1:length(ns)) {
@@ -42,29 +44,33 @@ for (i in 1:length(ns)) {
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
 
     ### Selective Inference
+    si_coverage <- logical(p)
+    start <- Sys.time()
+    cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
+    lam <- cv_res$lambda.min
+    fit <- cv_res$glmnet.fit
+    b <- coef(fit, x=dat$X, y=dat$y, s = lam, exact = TRUE)[-1]
     tryCatch({
-      si_coverage <- logical(p)
-      start <- Sys.time()
-      cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
-      lam <- cv_res$lambda.min
-
-      fit <- cv_res$glmnet.fit
-      b <- coef(fit, s = lam, exact = TRUE)[-1]
-      sh <- estimateSigma(dat$X, dat$y)$sigmahat
-      res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), sigma=sh, alpha = .2)
+      # sh <- estimateSigma(dat$X, dat$y)$sigmahat
+      res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), alpha = .2)
       times[j,1] <- as.numeric(difftime(Sys.time(), start, units = "secs"))
-      bb <- res$vmat %*% dat$y
-      B <- cbind(bb, res$ci, res$pv)
+      B <- res$ci
       rownames(B) <- names(res$vars)
+      colnames(B) <- c("lower", "upper")
       # B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
       si_ci <- B %>%
         data.frame(method = "Selective Inference", variable = rownames(B)) %>%
-        rename(estimate = X1, lower = X2, upper = X3) %>%
+        mutate(estimate = b[as.numeric(str_remove(rownames(B), "V"))]) %>%
         left_join(truth_df, by = "variable")
 
       si_coverage[as.numeric(str_remove(si_ci$variable, "V"))] <- si_ci$lower <= si_ci$truth & si_ci$truth <= si_ci$upper
       lambdas[j, 1] <- lam
-    }, error = function(e) {print(e); print("SI failed"); si_ci <- NULL; lambdas[j, 1] <- NA})
+      widths[j,1] <- mean(si_ci$upper - si_ci$lower) ## Only for variables included
+    }, error = function(e) {
+      print(e); print("SI failed")
+      si_ci <- NULL
+      }
+    )
 
     ### HDI - Across a range of lambda values
     start <- Sys.time()
@@ -77,19 +83,26 @@ for (i in 1:length(ns)) {
       mutate(estimate = fit.lasso.allinfo$bhat)
     hdi_coverage <- hdi_ci$lower <= laplace_beta & laplace_beta <= hdi_ci$upper
     lambdas[j, 2] <- fit.lasso.allinfo$lambda
+    widths[j,2] <- mean(hdi_ci$upper - hdi_ci$lower)
 
     ### Lasso-boot
     start <- Sys.time()
-    lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
+    lassoboot <- boot.ncvreg.r(dat$X, dat$y, verbose = FALSE)
     times[j,3] <- as.numeric(difftime(Sys.time(), start, units = "secs"))
-    lassoboot_ci <- ci.boot.ncvreg(lassoboot)
+    lassoboot_ci <- ci.boot.ncvreg.r(lassoboot)
     lassoboot_coverage <- lassoboot_ci$lower <= laplace_beta & laplace_beta <= lassoboot_ci$upper
     lambdas[j, 3] <- lassoboot$lamdba
+    widths[j,3] <- mean(lassoboot_ci$upper - lassoboot_ci$lower)
 
-    ## Coverage calculation
-    coverage_df <- cbind(si_coverage, hdi_coverage, lassoboot_coverage)
+    coverage_df <- data.frame(
+      "si" = si_coverage,
+      "hdi" = hdi_coverage,
+      "lasso_sample" = lassoboot_coverage,
+      "truth" = laplace_beta, "group" = j
+    )
+
     coverages[[j]] <- coverage_df
-    overall_coverage[j,] <- apply(coverage_df, 2, mean)
+    overall_coverage[j,] <- apply(coverage_df[,-c((ncol(coverage_df)-1) : ncol(coverage_df)),drop=FALSE], 2, mean)
 
   }
 
@@ -105,8 +118,12 @@ for (i in 1:length(ns)) {
   sd_lambdas <- apply(lambdas, 2, sd, na.rm = TRUE)
   res_lambda[i,] <- paste0(round(mean_lambdas, 3), " (", round(sd_lambdas, 3), ")")
 
+  mean_widths <- apply(widths, 2, mean, na.rm = TRUE)
+  sd_widths <- apply(widths, 2, sd, na.rm = TRUE)
+  res_width[i,] <- paste0(round(mean_widths, 3), " (", round(sd_widths, 3), ")")
+
   all_coverages[[i]] <- coverages
 
 }
 
-save(res_time, res_coverage, res_lambda, all_coverages, file = "./rds/method_comparison_laplace_sim_sample.rds")
+save(res_time, res_coverage, res_lambda, res_width, all_coverages, file = "./rds/method_comparison_laplace_100.rds")

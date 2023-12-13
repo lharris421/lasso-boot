@@ -1,7 +1,8 @@
-# rm(list=ls())
-library(dplyr)
+rm(list=ls())
+unloadNamespace("ncvreg")
 .libPaths("./local")
 library(ncvreg)
+library(dplyr)
 library(hdrm)
 
 my_seed <- 189807771
@@ -29,8 +30,8 @@ for (j in 1:length(ns)) {
 
   res <- list()
   for (i in 1:length(lambda_seq)) {
-    boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i])
-    res[[i]] <- ci.boot.ncvreg(boot_res) %>%
+    boot_res <- boot.ncvreg.r(X = dat$X, y = dat$y, lambda = lambda_seq[i])
+    res[[i]] <- ci.boot.ncvreg.r(boot_res) %>%
       dplyr::mutate(width = (upper - lower), lambda = lambda_seq[i]) %>%
       dplyr::select(variable, width, lambda, estimate, lower, upper)
   }
@@ -44,4 +45,4 @@ for (j in 1:length(ns)) {
 
 }
 
-save(plot_res, file = "./rds/across_lambda_coverage_sparse_original.rds")
+save(plot_res, file = "./rds/across_lambda_coverage_sparse.rds")

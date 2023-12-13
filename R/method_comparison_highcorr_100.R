@@ -61,38 +61,26 @@ cv_ridge <- function(X, y, nfolds = 10) {
 
 }
 
-
-lasso_cis_s <- lasso_cis_c <- lasso_cis_o <- list()
-ridge_cis <- list()
+lasso_cis_s <- ridge_cis <- list()
 for (i in 1:100) {
 
-  dat <- genDataABN(n = 30, p = 10, a = 1, b = 1, rho = .99)
+  dat <- gen_data_abn(n = 50, p = 25, a = 1, b = 1, rho = .99)
 
   ### Ridge
   ridge <- hdrm::ridge(dat$X, dat$y)
   ridge_cv <- cv_ridge(dat$X, dat$y)
   ridge_cis[[i]] <- confint(ridge, level = 0.8, lambda = ridge_cv$lambda.min)
 
-  ### Lasso-boot original
-  lassoboot_o <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, max.iter = 1e10)
-  lasso_cis_o[[i]] <- ci.boot.ncvreg(lassoboot_o)
-
-  ### Lasso-boot combined
-  lassoboot_c <- boot.ncvreg.r(dat$X, dat$y, verbose = FALSE, quantiles = c(0.1, 0.9), max.iter = 1e10)
-  lasso_cis_c[[i]] <- ci.boot.ncvreg.r(lassoboot_c)
-
   ### Lasso-boot sample
-  lassoboot_s <- boot.ncvreg.r(dat$X, dat$y, verbose = FALSE, max.iter = 1e10)
+  lassoboot_s <- boot.ncvreg.r(dat$X, dat$y, verbose = FALSE, max.iter = 1e9)
   lasso_cis_s[[i]] <- ci.boot.ncvreg.r(lassoboot_s)
 
   if (i == 37) {
-    lasso_example_o <- lassoboot_o
-    lasso_example_c <- lassoboot_c
     lasso_example_s <- lassoboot_s
     ridge_example <- cbind(confint(ridge, level = 0.8, lambda = ridge_cv$lambda.min), "Estimate" = coef(ridge, lambda = ridge_cv$lambda.min))
   }
 
 }
 
-save(ridge_cis, lasso_cis_o, lasso_cis_c, lasso_cis_s,
-     lasso_example_o, lasso_example_c, lasso_example_s, ridge_example, file = "./rds/lassoboot_method_comparison_highcorr_100_n30.rds")
+save(ridge_cis, lasso_cis_s,
+     lasso_example_s, ridge_example, file = "./rds/method_comparison_highcorr_100.rds")

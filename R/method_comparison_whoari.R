@@ -1,13 +1,15 @@
 rm(list=ls())
+unloadNamespace("ncvreg")
+.libPaths("./local")
+library(ncvreg)
 library(glmnet)
 library(tictoc)
 library(selectiveInference)
 library(hdi)
-.libPaths("./local")
-library(ncvreg)
 library(ggplot2)
 library(hdrm)
 library(dplyr)
+library(stringr)
 
 my_seed <- 189807771
 set.seed(my_seed)
@@ -24,23 +26,29 @@ n <- nrow(dat$X)
 p <- ncol(dat$X)
 
 ### Selective Inference
-tryCatch({
-  cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
-  lam <- cv_res$lambda.min
+cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
+si_lam <- lam <- cv_res$lambda.min
 
-  fit <- cv_res$glmnet.fit
-  b <- coef(fit, s = lam, exact = TRUE)[-1]
-  sh <- estimateSigma(dat$X, dat$y)$sigmahat
-  res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), sigma=sh, alpha = .2)
-  bb <- res$vmat %*% dat$y
-  B <- cbind(bb, res$ci, res$pv)
+fit <- cv_res$glmnet.fit
+b <- coef(fit, s = lam, exact = TRUE)[-1]
+names(b) <- colnames(dat$X)
+tryCatch({
+  # sh <- estimateSigma(dat$X, dat$y)$sigmahat
+  # print(sh)
+  res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), alpha = .2)
+  B <- res$ci
   rownames(B) <- names(res$vars)
-  B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
+  colnames(B) <- c("lower", "upper")
+  print(B)
+  # B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
   si_ci <- B %>%
     data.frame(method = "Selective Inference", variable = rownames(B)) %>%
-    rename(estimate = X1, lower = X2, upper = X3)
-  si_lam <- lam
-}, error = function(e) {si_ci <- si_lam <- NULL})
+    mutate(estimate = b[rownames(B)])
+}, error = function(e) {
+  si_ci <- NA
+  print(e)
+}
+)
 
 ### HDI - Across a range of lambda values
 fit.lasso.allinfo <- boot.lasso.proj(dat$X, dat$y, return.bootdist = TRUE, B = 100, boot.shortcut = TRUE)
@@ -52,11 +60,11 @@ hdi_ci <- ci_hdi %>%
 hdi_lam <- fit.lasso.allinfo$lambda
 
 ### Lasso-boot
-lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
-lassoboot_ci <- ci.boot.ncvreg(lassoboot)
+lassoboot <- boot.ncvreg.r(dat$X, dat$y, verbose = FALSE)
+lassoboot_ci <- ci.boot.ncvreg.r(lassoboot)
 lassoboot_lam <- lassoboot$lamdba
 
 plot_res <- list(si_ci, hdi_ci, lassoboot_ci, si_lam, hdi_lam, lassoboot_lam, n, p)
 
-save(plot_res, file = "./rds/method_comparison_real.rds")
+save(plot_res, file = "./rds/method_comparison_whoari.rds")
 

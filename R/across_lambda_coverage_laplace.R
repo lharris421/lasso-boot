@@ -1,9 +1,9 @@
 rm(list=ls())
-library(dplyr)
-library(hdrm)
+unloadNamespace("ncvreg")
 .libPaths("./local")
 library(ncvreg)
-.libPaths(.Library)
+library(dplyr)
+library(hdrm)
 
 rt <- 2
 ns <- c(30, 60, 90, 120)
@@ -38,8 +38,8 @@ for (j in 1:length(ns)) {
 
   res <- list()
   for (i in 1:length(lambda_seq)) {
-    boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i])
-    res[[i]] <- ci.boot.ncvreg(boot_res) %>%
+    boot_res <- boot.ncvreg.r(X = dat$X, y = dat$y, lambda = lambda_seq[i])
+    res[[i]] <- ci.boot.ncvreg.r(boot_res) %>%
       dplyr::mutate(width = (upper - lower), lambda = lambda_seq[i]) %>%
       dplyr::select(variable, width, lambda, estimate, lower, upper)
   }
@@ -53,4 +53,4 @@ for (j in 1:length(ns)) {
 
 }
 
-save(plot_res, file = "./rds/across_lambda_coverage_laplace_original.rds")
+save(plot_res, file = "./rds/across_lambda_coverage_laplace.rds")

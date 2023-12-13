@@ -1,7 +1,9 @@
 ## Libraries
 rm(list=ls())
-library(hdrm)
+unloadNamespace("ncvreg")
+.libPaths("./local")
 library(ncvreg)
+library(hdrm)
 
 ## Functions
 find_thresh <- function(x, y) { abs(t(x) %*% y) / length(y) }
@@ -58,6 +60,6 @@ mode <- coef(cv_fit$fit, lambda = lambda)[-1]
 trad_res <- data.frame(estimate = mode, lower = ci_lower, upper = ci_upper, variable = names(mode))
 
 ## Ours
-lasso_boot <- boot.ncvreg(dat$X, dat$y, lambda = lambda, verbose = FALSE)
+lasso_boot <- boot.ncvreg.r(dat$X, dat$y, lambda = lambda, verbose = FALSE)
 
-save(dat, trad_res, lasso_boot, file = "./rds/bootstrap_quantile_comparison.rds")
+save(dat, trad_res, lasso_boot, file = "./rds/method_comparison_traditional.rds")
