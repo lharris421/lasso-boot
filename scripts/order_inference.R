@@ -25,6 +25,7 @@ confint(lm(R ~ 0 + X1))[1,]
 ## 2nd Order
 confint(lm(Y ~ X1 + X2))[2,]
 
+<<<<<<< HEAD:scripts/order_inference.R
 
 
 ###
@@ -32,3 +33,11 @@ X <- X2
 proj <- (diag(length(Y)) - X%*%solve(t(X) %*% X)%*%t(X))
 R <- as.numeric(proj %*% Y)
 confint(lm(R ~ as.numeric(proj %*% X1)))[2,]
+=======
+# Projection (2nd order...although maybe 1st order versions exist in model selection context?)
+X <- model.matrix(~X2)
+Q <- diag(length(Y)) - X %*% solve(crossprod(X)) %*% t(X)
+yy <- Q %*% Y
+XX <- Q %*% X1
+lm(yy ~ 0 + XX) |> confint()
+>>>>>>> b72763e3bf4a33bfd30fd0e9b0cfb94d13f1a05e:R/order_inference.R

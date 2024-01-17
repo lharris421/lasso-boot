@@ -51,4 +51,4 @@ storage/
 local/
 
 # local rds (now handled by dat)
-/rds
+rds/
