@@ -1,18 +1,7 @@
-rm(list=ls())
-unloadNamespace("ncvreg")
-.libPaths("./local")
-library(ncvreg)
-library(glmnet)
-library(tictoc)
-library(selectiveInference)
-library(hdi)
-library(ggplot2)
-library(hdrm)
-library(dplyr)
-library(stringr)
+source("./scripts/setup/setup.R")
 
-my_seed <- 189807771
-set.seed(my_seed)
+quantiles <- "disturbed"
+method <- "quantile"
 
 plot_res <- list()
 
@@ -51,7 +40,7 @@ tryCatch({
 )
 
 ### HDI - Across a range of lambda values
-fit.lasso.allinfo <- boot.lasso.proj(dat$X, dat$y, return.bootdist = TRUE, B = 100, boot.shortcut = TRUE)
+fit.lasso.allinfo <- boot.lasso.proj(dat$X, dat$y, return.bootdist = TRUE, B = nboot, boot.shortcut = TRUE)
 ci_hdi <- confint(fit.lasso.allinfo, level = 0.8)
 
 hdi_ci <- ci_hdi %>%
@@ -60,11 +49,10 @@ hdi_ci <- ci_hdi %>%
 hdi_lam <- fit.lasso.allinfo$lambda
 
 ### Lasso-boot
-lassoboot <- boot.ncvreg.r(dat$X, dat$y, verbose = FALSE)
-lassoboot_ci <- ci.boot.ncvreg.r(lassoboot)
+lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, quantiles = quantiles, nboot = nboot)
+lassoboot_ci <- ci.boot.ncvreg(lassoboot, method = method, original_data = dat)
 lassoboot_lam <- lassoboot$lamdba
 
 plot_res <- list(si_ci, hdi_ci, lassoboot_ci, si_lam, hdi_lam, lassoboot_lam, n, p)
 
-save(plot_res, file = "./rds/method_comparison_whoari.rds")
-
+save(plot_res, file = glue("./rds/method_comparison_whoari_{quantiles}_{method}_span1.rds"))

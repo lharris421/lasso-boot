@@ -1,29 +1,20 @@
-rm(list=ls())
-unloadNamespace("ncvreg")
-.libPaths("./local")
-library(ncvreg)
-library(dplyr)
-library(hdrm)
+source("./scripts/setup/setup.R")
 
 rt <- 2
-ns <- c(30, 60, 90, 120)
+ns <- c(30, 60, 120)
+p <- 60
+quantiles <- "disturbed"
+method <- "quantile"
+
 plot_res <- list()
-
-my_seed <- 189807771
-set.seed(my_seed)
-
-rlaplace <- function(n, rate = 1) {
-  rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
-}
-
 for (j in 1:length(ns)) {
 
   n <- ns[j]
 
   true_lambda <- (1 / n) * rt
 
-  laplace_beta <- rlaplace(60, rate = rt)
-  dat <- gen_data(n = n, p = 60, beta = laplace_beta)
+  laplace_beta <- rlaplace(p, rate = rt)
+  dat <- gen_data(n = n, p = p, beta = laplace_beta)
 
   lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
   lambda_min <- lambda_max * 0.001
@@ -38,10 +29,11 @@ for (j in 1:length(ns)) {
 
   res <- list()
   for (i in 1:length(lambda_seq)) {
-    boot_res <- boot.ncvreg.r(X = dat$X, y = dat$y, lambda = lambda_seq[i])
-    res[[i]] <- ci.boot.ncvreg.r(boot_res) %>%
+    boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i], nboot = nboot, quantiles = quantiles)
+    res[[i]] <- ci.boot.ncvreg(boot_res, method = method, original_data = dat) %>%
       dplyr::mutate(width = (upper - lower), lambda = lambda_seq[i]) %>%
       dplyr::select(variable, width, lambda, estimate, lower, upper)
+    if (any(is.na(res[[i]]$lower))) stop("Something wrong")
   }
 
   truth <- data.frame(variable = names(dat$beta), truth = as.numeric(dat$beta))
@@ -53,4 +45,4 @@ for (j in 1:length(ns)) {
 
 }
 
-save(plot_res, file = "./rds/across_lambda_coverage_laplace.rds")
+save(plot_res, file = glue("./rds/across_lambda_coverage_laplace_{quantiles}_{method}.rds"))

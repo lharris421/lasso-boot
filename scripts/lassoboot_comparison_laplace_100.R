@@ -30,74 +30,53 @@ for (i in 1:length(ns)) {
   print(i)
   lambdas <- matrix(nrow = 100, ncol = 3)
   times <- matrix(nrow = 100, ncol = 3)
-  overall_coverage <- matrix(nrow = 100, ncol = 3)
-  widths <- matrix(nrow = 100, ncol = 3) ## Need to ADD
+  overall_coverage <- matrix(nrow = 100, ncol = 3) ## make back to 3
+  widths <- matrix(nrow = 100, ncol = 3)
   coverages <- list()
 
   n <- ns[i]
   true_lambda <- (1 / n) * rt
 
   for (j in 1:100) {
+
     laplace_beta <- rlaplace(p, rate = rt)
     dat <- gen_data(n = n, p = p, beta = laplace_beta)
     dat$X <- ncvreg::std(dat$X)
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
 
-    ### Selective Inference
-    si_coverage <- logical(p)
+    ### Lasso-boot - original
     start <- Sys.time()
-    cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
-    lam <- cv_res$lambda.min
-    fit <- cv_res$glmnet.fit
-    b <- coef(fit, x=dat$X, y=dat$y, s = lam, exact = TRUE)[-1]
-    tryCatch({
-      # sh <- estimateSigma(dat$X, dat$y)$sigmahat
-      res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), alpha = .2)
-      times[j,1] <- as.numeric(difftime(Sys.time(), start, units = "secs"))
-      B <- res$ci
-      rownames(B) <- names(res$vars)
-      colnames(B) <- c("lower", "upper")
-      # B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
-      si_ci <- B %>%
-        data.frame(method = "Selective Inference", variable = rownames(B)) %>%
-        mutate(estimate = b[as.numeric(str_remove(rownames(B), "V"))]) %>%
-        left_join(truth_df, by = "variable")
+    lassoboot_o <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
+    times[j,1] <- as.numeric(difftime(Sys.time(), start, units = "secs"))
+    lassoboot_ci_o <- ci.boot.ncvreg(lassoboot_o)
+    lassoboot_coverage_o <- lassoboot_ci_o$lower <= laplace_beta & laplace_beta <= lassoboot_ci_o$upper
+    lambdas[j,1] <- lassoboot_o$lamdba
+    widths[j,1] <- mean(lassoboot_ci_o$upper - lassoboot_ci_o$lower)
 
-      si_coverage[as.numeric(str_remove(si_ci$variable, "V"))] <- si_ci$lower <= si_ci$truth & si_ci$truth <= si_ci$upper
-      lambdas[j, 1] <- lam
-      widths[j,1] <- mean(si_ci$upper - si_ci$lower) ## Only for variables included
-    }, error = function(e) {
-      print(e); print("SI failed")
-      si_ci <- NULL
-      }
-    )
-
-    ### HDI - Across a range of lambda values
+    ### Lasso-boot - combine
     start <- Sys.time()
-    fit.lasso.allinfo <- boot.lasso.proj(dat$X, dat$y, return.bootdist = TRUE, B = 100, boot.shortcut = TRUE)
+    lassoboot_c <- boot.ncvreg.r(dat$X, dat$y, verbose = FALSE, quantiles = c(0.1, 0.9))
     times[j,2] <- as.numeric(difftime(Sys.time(), start, units = "secs"))
-    ci_hdi <- confint(fit.lasso.allinfo, level = 0.8)
+    lassoboot_ci_c <- ci.boot.ncvreg.r(lassoboot_c)
+    lassoboot_coverage_c <- lassoboot_ci_c$lower <= laplace_beta & laplace_beta <= lassoboot_ci_c$upper
+    lambdas[j, 2] <- lassoboot_c$lamdba
+    widths[j,2] <- mean(lassoboot_ci_c$upper - lassoboot_ci_c$lower)
 
-    hdi_ci <- ci_hdi %>%
-      data.frame(method = "BLP", variable = rownames(ci_hdi)) %>%
-      mutate(estimate = fit.lasso.allinfo$bhat)
-    hdi_coverage <- hdi_ci$lower <= laplace_beta & laplace_beta <= hdi_ci$upper
-    lambdas[j, 2] <- fit.lasso.allinfo$lambda
-    widths[j,2] <- mean(hdi_ci$upper - hdi_ci$lower)
-
-    ### Lasso-boot
+    ### Lasso-boot - sample
     start <- Sys.time()
-    lassoboot <- boot.ncvreg.r(dat$X, dat$y, verbose = FALSE)
+    lassoboot_s <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
     times[j,3] <- as.numeric(difftime(Sys.time(), start, units = "secs"))
-    lassoboot_ci <- ci.boot.ncvreg.r(lassoboot)
-    lassoboot_coverage <- lassoboot_ci$lower <= laplace_beta & laplace_beta <= lassoboot_ci$upper
-    lambdas[j, 3] <- lassoboot$lamdba
-    widths[j,3] <- mean(lassoboot_ci$upper - lassoboot_ci$lower)
+    lassoboot_ci_s <- ci.boot.ncvreg(lassoboot_s)
+    lassoboot_coverage_s <- lassoboot_ci_s$lower <= laplace_beta & laplace_beta <= lassoboot_ci_s$upper
+    lambdas[j, 3] <- lassoboot_s$lamdba
+    widths[j,3] <- mean(lassoboot_ci_s$upper - lassoboot_ci_s$lower)
 
+    ## Coverage calculation
+    # coverage_df <- cbind(si_coverage, hdi_coverage, lassoboot_coverage)
     coverage_df <- data.frame(
-      "si" = si_coverage,
-      "hdi" = hdi_coverage,
-      "lasso_sample" = lassoboot_coverage,
+      "lasso_original" = lassoboot_coverage_o,
+      "lasso_combined" = lassoboot_coverage_c,
+      "lasso_sample" = lassoboot_coverage_s,
       "truth" = laplace_beta, "group" = j
     )
 
