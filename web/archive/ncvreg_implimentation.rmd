@@ -1,0 +1,412 @@
+---
+title: "nvcreg implimentation"
+author: "Logan Harris"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+---
+
+```{r setup, child = 'web/_include/setup.rmd'}
+```
+
+```{r, eval=FALSE}
+## install.packages("githubinstall")
+## githubinstall::gh_install_packages("breheny/ncvreg", ref = "bootstrap")
+```
+
+
+# The posterior
+
+## Set up
+
+```{r}
+dlaplace <- function(x, rate = 1, log = FALSE) {
+  if (log) {
+    dexp(abs(x), rate, log = TRUE) - log(2)
+  } else {
+    dexp(abs(x), rate) / 2 
+  }
+}
+dlik <- function(x, z, sigma2, n, log = FALSE) {
+  if (log) {
+    -(n/2*sigma2)*(x - z)^2
+  } else {
+    exp(-(n/2*sigma2)*(x - z)^2)
+  }
+}
+dpost <- function(x, z, sigma2, n, lambda, log = FALSE) {
+  rate <- (lambda*n / sigma2)
+  if (log) {
+    return(dlaplace(x, rate = rate, log = TRUE) + dlik(x, z, sigma2, n, log = TRUE))
+  } else {
+    return(dlaplace(x, rate = rate) * dlik(x, z, sigma2, n))
+  }
+}
+```
+
+## lambda = 1, sigma2 = 1, n = 100 (posterior)
+
+```{r}
+zs <- c(0, .5, 1, 1.2, 1.5, 2)
+lambda <- 1
+sigma2 <- 1
+n <- 100
+x <- seq(-1, 1, by = .001)
+
+for (z in zs) {
+  dense <- dpost(x, z, sigma2, n, lambda)
+  plot(x, dense, type = "l") 
+}
+```
+
+## n = 10000 (log - posterior)
+
+```{r}
+n <- 10000
+x <- seq(-1, 1, by = .01)
+
+for (z in zs) {
+  dense <- dpost(x, z, sigma2, n, lambda, log = TRUE)
+  plot(x, dense, type = "l") 
+}
+```
+
+# Comparison to Using Integrate (at lambda_max)
+
+```{r}
+set.seed(my_seed)
+dat <- hdrm::genDataABN(n = 40, p = 60, a = 6, b = 2, beta = c(-2, -1, -0.5, 0.5, 1, 2))
+
+lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
+lambda_max <- lambda_max - lambda_max*.01
+set.seed(my_seed)
+boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_max)
+ci_new <- ncvreg:::ci.boot.ncvreg(boot_res) %>%
+  dplyr::select(variable, lower, upper)
+```
+
+
+```{r}
+set.seed(my_seed)
+tmp_orig <- eb_boot(dat = dat, type = "original", lambda = lambda_max)
+names(tmp_orig) <- c("lowers", "uppers", "estimates")
+ci_old <- ncvreg:::ci.boot.ncvreg(tmp_orig) %>%
+  dplyr::select(variable, lower_old = lower, upper_old = upper)
+```
+
+```{r}
+ci_new %>%
+  left_join(ci_old, by = "variable")
+```
+
+
+
+# Supporting Functions
+
+## Bootstrap Simulation
+
+```{r}
+boot_sim <- function(beta, n = 100, p = 60, b, nboot = 100, nsim = 100, progress = FALSE) {
+
+  overall_cov <- numeric(nsim)
+  indiv_cov <- matrix(nrow = nsim, ncol = p)
+
+  if (progress) pb <- txtProgressBar(1, nsim, style = 3)
+
+  for (iter in 1:nsim) {
+    if (missing(b)) {
+      dat <- gen_data(n = n, p = p, p1 = length(beta), beta = beta)  
+    } else {
+      dat <- genDataABN(n = n, p = p, a = length(beta), b = b, beta = beta)  
+    }
+    
+    tbeta <- dat$beta
+    boot <- boot.ncvreg(dat$X, dat$y, nboot = nboot, verbose = FALSE)
+    ci <- ci.boot.ncvreg(boot)
+
+    indiv_cov[iter,] <- tbeta >= ci$lower & tbeta <= ci$upper
+    overall_cov[iter] <- mean(indiv_cov[iter,])
+
+    if (progress) setTxtProgressBar(pb, iter)
+
+  }
+
+  return(list("overall_coverage" = overall_cov, "individual_coverage" = indiv_cov, "beta" = tbeta))
+
+}
+```
+
+## Method Comparison
+
+```{r}
+plot_ci_comparison <- function(ci_df, nvars = 30) {
+
+  plot_vars <- list()
+  for (current_method in unique(ci_df$method)) {
+    plot_vars[[current_method]] <- ci_df %>%
+      filter(method == current_method) %>%
+      dplyr::arrange(desc(abs(estimate))) %>%
+      slice_head(n = nvars) %>%
+      pull(variable)
+  }
+  plot_vars <- unique(unlist(plot_vars))
+
+  plot_res <- ci_df %>%
+    filter(variable %in% plot_vars) %>%
+    dplyr::arrange(desc(abs(estimate)))
+
+  plot_res$variable <- factor(plot_res$variable, levels = rev(plot_vars))
+
+  gg <- plot_res %>%
+    ggplot() +
+    geom_errorbar(aes(xmin = lower, xmax = upper, y = variable, color = method), alpha = .6) +
+    geom_point(aes(x = estimate, y = variable, color = method), alpha = .6) +
+    theme_bw() +
+    labs(y = "Variable", x = "Estimate")
+
+  return(gg)
+
+}
+```
+
+# One Covariate
+
+## Beta = 0
+
+### Single Interval
+
+```{r}
+set.seed(my_seed)
+dat <- gen_data(n = 30, p = 1, beta = 0)
+res <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, seed = 1234)
+ci.boot.ncvreg(res)
+```
+
+
+### Coverage
+
+```{r}
+set.seed(my_seed)
+mean(boot_sim(beta = 0, n = 30, p = 1)$overall_coverage)
+```
+
+## Beta = 3
+
+### Single Interval
+
+```{r}
+set.seed(my_seed)
+dat <- gen_data(beta = 3, n = 30, p = 1, p1 = 1)
+tmp <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
+tmp$lamdba
+ci.boot.ncvreg(tmp)[c(1, 3, 4)]
+```
+
+
+### Coverage
+
+```{r}
+set.seed(my_seed)
+mean(boot_sim(beta = 3, n = 30, p = 1)$overall_coverage)
+```
+
+# Many Covariates 
+
+## p = 60, n = 100
+
+### Single Example
+
+
+```{r}
+set.seed(my_seed)
+dat <- genDataABN(beta = c(2, 1, 0.5, -2, -1, -0.5), n = 100, p = 60, a = 6, b = 2)
+plot(boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = 100))
+```
+
+```{r}
+set.seed(my_seed)
+ci.boot.ncvreg(boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = 100))
+```
+
+### Coverage
+
+```{r}
+set.seed(my_seed)
+res <- boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), b = 2)
+```
+
+##### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_coverage)
+hist(res$overall_coverage, xlab = "Coverage", main ="")
+```
+
+##### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$individual_coverage, 2, mean) , beta = res$beta)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+# Interval widths
+
+```{r}
+set.seed(my_seed)
+# dat <- hdrm::gen_data(n = 100, p = 60, a = 6, b = 2, beta = c(-2, -1, -0.5, 0.5, 1, 2))
+dat <- gen_data(n = 100, p = 60, beta = c(-2, -1, -0.5, 0.5, 1, 2, rep(0, 54)))
+
+
+lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
+lambda_min <- lambda_max * 0.001
+lambda_max <- lambda_max - lambda_max*.01
+lambda_min <- lambda_min + lambda_min*.01
+lambda_seq <- 10^(seq(log(lambda_max, 10), log(lambda_min, 10), length.out = 10))
+```
+
+
+## Variance = 1
+
+```{r}
+res <- list()
+for (i in 1:length(lambda_seq)) {
+  boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i], sigma2 = 1)
+  res[[i]] <- ncvreg:::ci.boot.ncvreg(boot_res) %>%
+    dplyr::mutate(width = upper - lower, lambda = lambda_seq[i]) %>%
+    dplyr::select(variable, width, lambda, estimate) 
+}
+
+truth <- data.frame(variable = names(dat$beta), truth = as.character(abs(dat$beta)), sign = sign(dat$beta))
+red_res <- res
+
+# do.call("rbind", red_res) %>%
+#   left_join(truth) %>%
+#   ggplot(aes(x = lambda, y = width * sign, color = truth)) +
+#   geom_point(alpha = .6) +
+#   scale_x_continuous(
+#     trans = 'log10' 
+#   ) +
+#   xlab("Lambda") + ylab("Interval Width") +
+#   theme_bw() +
+#   scale_color_discrete(name = expression(abs(beta)))
+
+
+do.call("rbind", red_res) %>%
+  left_join(truth) %>%
+  ggplot(aes(x = lambda, y = width, color = truth)) +
+  geom_jitter(alpha = .6, width = .05) +
+  scale_x_continuous(
+    trans = 'log10' 
+  ) +
+  xlab("Lambda") + ylab("Interval Width") +
+  theme_bw() +
+  scale_color_discrete(name = expression(abs(beta)))
+```
+
+## Variance estimated using CV
+
+```{r}
+res <- list()
+for (i in 1:length(lambda_seq)) {
+  boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i])
+  res[[i]] <- ncvreg:::ci.boot.ncvreg(boot_res) %>%
+    dplyr::mutate(width = upper - lower, lambda = lambda_seq[i]) %>%
+    dplyr::select(variable, width, lambda, estimate) 
+}
+
+truth <- data.frame(variable = names(dat$beta), truth = as.character(abs(dat$beta)), sign = sign(dat$beta))
+red_res <- res
+
+do.call("rbind", red_res) %>%
+  left_join(truth) %>%
+  ggplot(aes(x = lambda, y = width * sign, color = truth)) +
+  geom_point(alpha = .6) +
+  scale_x_continuous(
+    trans = 'log10' 
+  ) +
+  xlab("Lambda") + ylab("Interval Width") +
+  theme_bw() +
+  scale_color_discrete(name = expression(abs(beta)))
+
+
+do.call("rbind", red_res) %>%
+  left_join(truth) %>%
+  ggplot(aes(x = lambda, y = width, color = truth)) +
+  geom_jitter(alpha = .6, width = .05) +
+  scale_x_continuous(
+    trans = 'log10' 
+  ) +
+  xlab("Lambda") + ylab("Interval Width") +
+  theme_bw() +
+  scale_color_discrete(name = expression(abs(beta)))
+```
+
+# Profiling
+
+```{r}
+set.seed(my_seed)
+dat <- gen_data(n = 10000, p = 600, beta = c(-2, -1, -0.5, 0.5, 1, 2, rep(0, 594)))
+tmp <- boot.ncvreg(dat$X, dat$y, time = TRUE)
+```
+
+# Beta = 0 + epsilon
+
+## Single Example
+
+```{r}
+set.seed(my_seed)
+dat <- gen_data(n = 100, p = 60, beta = c(-2, -1, -0.5, 0.5, 1, 2, 0 + 1e-4 * sample(c(-1, 1), 54, replace = TRUE)))
+plot(boot.ncvreg(dat$X, dat$y, verbose = FALSE))
+```
+
+
+## Coverage
+
+```{r}
+set.seed(my_seed)
+res <- boot_sim(beta = c(-2, -1, -0.5, 0.5, 1, 2, 0 + 1e-4 * sample(c(-1, 1), 54, replace = TRUE)))
+```
+
+#### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_coverage)
+hist(res$overall_coverage, xlab = "Coverage", main ="")
+```
+
+#### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$individual_coverage, 2, mean) , beta = res$beta)
+plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage")
+```
+
+
+# Beta = 0 + epsilon, large n, larger p
+
+## Single Example
+
+### Plot
+
+```{r}
+set.seed(my_seed)
+beta0_eps <- 1e-4 * sample(c(-1, 1), 1994, replace = TRUE)
+dat <- gen_data(n = 1000, p = 2000, beta = c(-2, -1, -0.5, 0.5, 1, 2, beta0_eps))
+tmp <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, time = TRUE)
+plot(tmp)
+```
+
+### Widths
+
+```{r}
+tmp_ci <- ci.boot.ncvreg(tmp)
+min(tmp_ci$upper - tmp_ci$lower)
+max(tmp_ci$upper - tmp_ci$lower)
+```
+
+### Epsilon Coverage
+
+```{r}
+mean(c((tmp_ci$upper[-c(1:6)] >= beta0_eps) & (tmp_ci$lower[-c(1:6)] <= beta0_eps)))
+```

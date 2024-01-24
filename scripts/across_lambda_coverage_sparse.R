@@ -1,7 +1,7 @@
 source("./scripts/setup/setup.R")
 
 ns <- c(50, 100, 200)
-quantiles <- "zs"
+quantiles <- "zerosample"
 method <- "quantile"
 
 plot_res <- list()

@@ -2,7 +2,7 @@ source("./scripts/setup/setup.R")
 
 n <- 100
 p <- 100
-quantiles <- "disturbed"
+quantiles <- "zerosample"
 method <- "quantile"
 all_res <- list()
 
@@ -68,4 +68,4 @@ all_res[[3]] <- accross_lambda_res(dat, quantiles, method)
 dat <- gen_data(n = n, p = p, beta = rt(p, 3))
 all_res[[4]] <- accross_lambda_res(dat, quantiles, method)
 
-save(all_res, file = glue("./rds/distribution_of_beta_{quantiles}_{method}_n{n}_p{p}_span1.rds"))
+save(all_res, file = glue("./rds/distribution_of_beta_{quantiles}_{method}_n{n}_p{p}.rds"))

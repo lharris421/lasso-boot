@@ -3,7 +3,7 @@ source("./scripts/setup/setup.R")
 rt <- 2
 ns <- c(30, 60, 120)
 p <- 60
-quantiles <- "disturbed"
+quantiles <- "zerosample"
 method <- "quantile"
 
 plot_res <- list()

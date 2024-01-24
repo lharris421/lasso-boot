@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
   message = FALSE,
   tidy = FALSE,
   warning = FALSE)
-devtools::load_all(quiet = TRUE)
+# devtools::load_all(quiet = TRUE)
 progress <- FALSE
 ```
 

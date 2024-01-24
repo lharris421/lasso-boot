@@ -3,7 +3,7 @@ source("./scripts/setup/setup.R")
 ## Parameters
 n <- 50
 p <- 25
-quantiles <- "disturbed"
+quantiles <- "zerosample"
 method <- "quantile"
 
 ## Functions
@@ -75,4 +75,4 @@ for (i in 1:100) {
 }
 
 save(ridge_cis, lasso_cis_s,
-     lasso_example_s, ridge_example, file = glue("./rds/method_comparison_highcorr_100_{quantiles}_{method}_n{n}_p{p}_span1.rds"))
+     lasso_example_s, ridge_example, file = glue("./rds/method_comparison_highcorr_100_{quantiles}_{method}_n{n}_p{p}.rds"))

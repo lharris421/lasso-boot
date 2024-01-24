@@ -1,15 +1,21 @@
 source("./scripts/setup/setup.R")
 
-n <- 100
+n <- 50
 p <- 50
-quantiles <- "zs"
+quantiles <- "zerosample"
 method <- "quantile"
-method <- "bca2"
+dist <- "laplace"
 
 coverages <- list()
 for (j in 1:100) {
 
-  dat <- gen_data(n = n, p = p, beta = rnorm(p, 0, 1))
+  if (dist == "laplace") {
+    beta <- rlaplace(p, rate = 2)
+  } else if (dist == "normal") {
+    beta <- rnorm(p, 0, 1)
+  }
+
+  dat <- gen_data(n = n, p = p, beta = beta)
   truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
 
   ### Lasso-boot
@@ -27,4 +33,4 @@ for (j in 1:100) {
 
 coverages <- do.call(rbind, coverages)
 
-save(coverages, file = glue("./rds/overall_v_feature_{quantiles}_{method}_n{n}_p{p}.rds"))
+save(coverages, file = glue("./rds/overall_v_feature_{dist}_{quantiles}_{method}_n{n}_p{p}.rds"))

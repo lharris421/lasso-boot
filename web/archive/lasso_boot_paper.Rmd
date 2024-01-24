@@ -1,0 +1,723 @@
+---
+title: "Paper Explorations"
+author: "Logan Harris"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+---
+
+```{r setup, child = 'web/_include/setup.rmd'}
+```
+
+```{r, eval=FALSE}
+## install.packages("githubinstall")
+## githubinstall::gh_install_packages("breheny/ncvreg", ref = "bootstrap")
+```
+
+```{r}
+boot_sim <- function(beta, n = 100, p = 60, a, b, rho = 0, nboot = 100, nsim = 100, progress = FALSE) {
+
+  overall_cov <- numeric(nsim)
+  indiv_cov <- matrix(nrow = nsim, ncol = p)
+
+  if (progress) pb <- txtProgressBar(1, nsim, style = 3)
+
+  for (iter in 1:nsim) {
+    if (missing(b)) {
+      dat <- gen_data(n = n, p = p, p1 = a, beta = beta, rho = rho)  
+    } else {
+      dat <- genDataABN(n = n, p = p, a = a, b = b, rho = rho, beta = beta)  
+    }
+    
+    tbeta <- dat$beta
+    boot <- boot.ncvreg(dat$X, dat$y, nboot = nboot, verbose = FALSE)
+    ci <- ci.boot.ncvreg(boot)
+
+    indiv_cov[iter,] <- tbeta >= ci$lower & tbeta <= ci$upper
+    overall_cov[iter] <- mean(indiv_cov[iter,])
+
+    if (progress) setTxtProgressBar(pb, iter)
+
+  }
+
+  return(list("overall_coverage" = overall_cov, "individual_coverage" = indiv_cov, "beta" = tbeta))
+
+}
+```
+
+```{r}
+sim_summary <- function(sim) {
+  # Convert to data frame
+  sim_df <- data.frame(overall_coverage = sim$overall_coverage)
+  tmp <- data.frame(coverage = apply(sim$individual_coverage, 2, mean), beta = sim$beta)
+  
+  # Calculate mean
+  mean_coverage <- mean(sim_df$overall_coverage)
+  
+  # Create histogram using ggplot
+  hist_plot <- ggplot(sim_df, aes(x = overall_coverage)) +
+    geom_histogram(binwidth = 0.05, fill = "blue", alpha = 0.7) +
+    geom_vline(aes(xintercept = mean_coverage), color = "red", linetype = "dashed", size = 1) +
+    annotate("text", x = mean_coverage, y = Inf, label = paste("Mean =", round(mean_coverage, 2)), vjust = 2.5, hjust = 1) +
+    labs(x = "Coverage", y = "Frequency", title = "Histogram of Overall Coverage") +
+    theme_bw()
+  
+  print(hist_plot)
+  
+  # Create scatter plot
+  scatter_plot <- ggplot(tmp, aes(x = abs(beta), y = coverage)) +
+    geom_point() +
+    geom_smooth(method = "loess", se = FALSE) +
+    labs(x = "True Beta Value", y = "Coverage", title = "Scatter Plot of Individual Coverage") +
+    theme_bw()
+  
+  print(scatter_plot)
+}
+```
+
+```{r}
+plot_ci_comparison <- function(ci_df, nvars = 30) {
+
+  plot_vars <- list()
+  for (current_method in unique(ci_df$method)) {
+    plot_vars[[current_method]] <- ci_df %>%
+      filter(method == current_method) %>%
+      dplyr::arrange(desc(abs(estimate))) %>%
+      slice_head(n = nvars) %>%
+      pull(variable)
+  }
+  plot_vars <- unique(unlist(plot_vars))
+
+  plot_res <- ci_df %>%
+    filter(variable %in% plot_vars) %>%
+    dplyr::arrange(desc(abs(estimate)))
+
+  plot_res$variable <- factor(plot_res$variable, levels = rev(plot_vars))
+
+  gg <- plot_res %>%
+    ggplot() +
+    geom_errorbar(aes(xmin = lower, xmax = upper, y = variable, color = method), alpha = .6) +
+    geom_point(aes(x = estimate, y = variable, color = method), alpha = .6) +
+    theme_bw() +
+    labs(y = "Variable", x = "Estimate")
+
+  return(gg)
+
+}
+```
+
+
+# Questions
+
+- Data simulation methods: Laplace beta under independence
+
+# Distribution of Beta: Sparse / Dense
+
+## Distributed as Laplace
+
+```{r}
+rlaplace <- function(n, rate = 1) {
+  rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
+}
+```
+
+### n = 100
+
+```{r}
+set.seed(my_seed)
+laplace_beta <- rlaplace(60)
+lapalce_sim <- boot_sim(beta = laplace_beta, n = 100, p = 60, a = 60)
+sim_summary(lapalce_sim)
+```
+
+### n = 60
+
+```{r}
+set.seed(my_seed)
+lapalce_sim <- boot_sim(beta = laplace_beta, n = 60, p = 60)
+sim_summary(lapalce_sim)
+```
+
+### n = 30
+
+```{r}
+set.seed(my_seed)
+lapalce_sim <- boot_sim(beta = laplace_beta, n = 30, p = 60)
+sim_summary(lapalce_sim)
+```
+
+## Distributed Normal mean = 0, sd = 1
+
+### n = 100
+
+```{r}
+set.seed(my_seed)
+normal_beta <- rnorm(60)
+normal_sim <- boot_sim(beta = normal_beta, n = 100, p = 60)
+sim_summary(normal_sim)
+```
+
+### n = 60
+
+```{r}
+set.seed(my_seed)
+normal_sim <- boot_sim(beta = normal_beta, n = 60, p = 60)
+sim_summary(normal_sim)
+```
+
+### n = 30
+
+```{r}
+set.seed(my_seed)
+normal_sim <- boot_sim(beta = normal_beta, n = 30, p = 60)
+sim_summary(normal_sim)
+```
+
+## Distributed t mean 0
+
+### n = 100
+
+```{r}
+set.seed(my_seed)
+t_beta <- rt(60, df = 3)
+t_sim <- boot_sim(beta = t_beta, n = 100, p = 60)
+sim_summary(t_sim)
+```
+
+### n = 60
+
+```{r}
+set.seed(my_seed)
+t_sim <- boot_sim(beta = t_beta, n = 60, p = 60)
+sim_summary(t_sim)
+```
+
+### n = 30
+
+```{r}
+set.seed(my_seed)
+t_sim <- boot_sim(beta = t_beta, n = 30, p = 60)
+sim_summary(t_sim)
+```
+
+## Sparse with a few Non-zero
+
+```{r}
+sparse_beta <- c(-2, 2, -2, 2, rep(0, 56))
+sparse_sim <- boot_sim(beta = sparse_beta, n = 100, p = 60)
+sim_summary(sparse_sim)
+```
+
+
+# Across lambda Performance
+
+- Determine what data simulation methods to focus on
+
+# Overall vs. per-feature coverage
+
+- Revisit after other plotting for other sections
+
+# Epsilon Conundrum
+
+## Generate Data, Select Parameters
+
+```{r}
+set.seed(my_seed)
+ec <- gen_data(n = 100, p = 60, beta = c(-2, -1, -0.5, 0.5, 1, 2, 0 + 1e-4 * sample(c(-1, 1), 54, replace = TRUE)))
+cv_fit <- cv.ncvreg(ec$X, ec$y, penalty = "lasso")
+(lambda <- cv_fit$lambda.min)
+(sigma2 <- cv_fit$cve[cv_fit$min])
+```
+
+
+## Traditional Bootstrap Approach
+
+```{r}
+trad_boot <- function(X, y, lambda) {
+  
+  n <- length(y)
+  idx_new <- sample(1:n, replace = TRUE)
+  ynew <- y[idx_new]
+  xnew <- ncvreg::std(X[idx_new,,drop=FALSE])
+  
+  lambda_max <- max(apply(xnew, 2, find_thresh, ynew))
+  lambda_min <- lambda - lambda / 100 ## set min to be slightly smaller
+  if (lambda_min > lambda_max | lambda > lambda_max) {
+    lambda_max <- lambda + lambda / 100
+    nlambda <- 2
+  }
+  lambda_seq <- 10^(seq(log(lambda_max, 10), log(lambda_min, 10), length.out = 100))
+  fit <- ncvreg(xnew, ynew, penalty = "lasso")
+  res <- coef(fit, lambda = lambda)[-1]
+  return(res)
+  
+}
+
+boot_res <- matrix(nrow = 100, ncol = 60)
+set.seed(my_seed)
+for (i in 1:100) {
+  
+  boot_res[i,] <- trad_boot(ec$X, ec$y, lambda = lambda)
+  
+}
+
+ci_lower <- apply(boot_res, 2, function(x) quantile(x, .1))
+ci_upper <- apply(boot_res, 2, function(x) quantile(x, .9))
+mode <- coef(cv_fit$fit, lambda = lambda)[-1]
+trad_res <- data.frame(estimate = mode, lower = ci_lower, upper = ci_upper, variable = names(mode))
+
+trad_res$variable <- factor(trad_res$variable, levels = rev(trad_res$variable))
+
+trad_res %>%
+  ggplot() +
+  geom_errorbar(aes(xmin = lower, xmax = upper, y = variable)) +
+  geom_point(aes(x = estimate, y = variable)) +
+  theme_bw() +
+  labs(y = "Variable", x = "Estimate")
+
+## Coverage
+mean(trad_res$lower <= ec$beta & ec$beta <= trad_res$upper)
+```
+
+## With Current Method
+
+```{r}
+set.seed(my_seed)
+tmp <- boot.ncvreg(ec$X, ec$y, verbose = FALSE)
+plot(tmp, n = 60)
+
+# Coverage
+ci <- ci.boot.ncvreg(tmp)
+mean(ci$lower <= ec$beta & ec$beta <= ci$upper)
+```
+
+
+# Comparison with BLP and SI
+
+- Timing
+- Interval widths (put back infinite, adjust plotting function)
+
+## Real Data
+
+- Ask about hdrm data
+
+```{r, eval = FALSE}
+.libPaths("./local")
+library(ncvreg)
+hdrm::downloadData()
+hdrm::readData(whoari)
+```
+
+
+## Sim Data
+
+### Generate Data
+
+```{r}
+set.seed(my_seed)
+dat <- genDataABN(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 60, a = 6, b = 2, n = 100)
+dat$X <- std(dat$X)
+```
+
+### Selective Inference
+
+```{r}
+set.seed(my_seed)
+
+tic()
+cv_res <- cv.glmnet(dat$X, dat$y, standardize = FALSE)
+lam <- cv_res$lambda.min
+
+fit <- cv_res$glmnet.fit
+b <- coef(fit, s = lam)[-1]
+sh <- estimateSigma(dat$X, dat$y)$sigmahat
+res <- fixedLassoInf(dat$X, dat$y, b, lam*length(dat$y), sigma=sh, alpha = .2)
+bb <- res$vmat %*% dat$y
+B <- cbind(bb, res$ci, res$pv)
+rownames(B) <- names(res$vars)
+B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
+si_abn <- B %>%
+  data.frame(method = "Selective Inference", variable = rownames(B)) %>%
+  rename(estimate = X1, lower = X2, upper = X3)
+toc()
+```
+
+### HDI
+
+```{r}
+set.seed(my_seed)
+
+tic()
+fit.lasso.allinfo <- boot.lasso.proj(dat$X, dat$y, return.bootdist = TRUE)
+ci_hdi <- confint(fit.lasso.allinfo, level = 0.8)
+
+hdi_abn <- ci_hdi %>%
+  data.frame(method = "BLP", variable = rownames(ci_hdi)) %>%
+  mutate(estimate = (lower + upper) / 2)
+toc()
+```
+
+### Lasso Boot
+
+```{r}
+set.seed(my_seed)
+
+tic()
+abn <- boot.ncvreg(dat$X, dat$y, verbose = FALSE)
+
+lassoboot_abn <- ci.boot.ncvreg(abn)
+toc()
+```
+
+### Comparison
+
+```{r}
+ci_df <- bind_rows(si_abn, hdi_abn, lassoboot_abn)
+
+gg <- plot_ci_comparison(ci_df)
+gg + coord_cartesian(xlim=c(-3, 3))
+```
+
+
+
+# Correlated Features / Elastic Net implimentaiton
+
+- Two highly correlated variables, what is their coverage
+  - Just those two
+  - Those two with sparse features
+- Elastic Net Method:
+  - Fit over range of alpha
+  - Select alpha, lambda, sigma2
+  - Augment data (probably should switch order)
+  - pass into function  
+
+<!-- ## Scenario 1 (Baseline) -->
+
+<!-- ```{r} -->
+<!-- dat1 <- genDataABN(n = 30, p = 3, a = 1, b = 1, rho = .5, beta = 1) -->
+<!-- plot(boot.ncvreg(dat1$X, dat1$y)) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- sim1 <- boot_sim(n = 30, p = 3, b = 1, rho = .5, beta = 1, nsim = 100) -->
+<!-- ``` -->
+
+<!-- ## Overall Coverage (per bootstrap) -->
+
+<!-- ```{r} -->
+<!-- mean(sim1$overall_coverage) -->
+<!-- hist(sim1$overall_coverage, xlab = "Coverage", main ="") -->
+<!-- ``` -->
+
+<!-- ## Individual Coverage (per covariate) -->
+
+<!-- ```{r} -->
+<!-- tmp <- data.frame(coverage = apply(sim1$individual_coverage, 2, mean) , beta = sim1$beta) -->
+<!-- plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage") -->
+<!-- ``` -->
+
+<!-- ## Scenario 2 -->
+
+<!-- ```{r} -->
+<!-- dat2 <- genDataABN(n = 30, p = 3, a = 1, b = 1, rho = .99, beta = 1) -->
+<!-- plot(boot.ncvreg(dat2$X, dat2$y)) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- sim2 <- boot_sim(n = 100, p = 3, b = 1, rho = .99, beta = 1, nsim = 100) -->
+<!-- ``` -->
+
+<!-- ## Overall Coverage (per bootstrap) -->
+
+<!-- ```{r} -->
+<!-- mean(sim2$overall_coverage) -->
+<!-- hist(sim2$overall_coverage, xlab = "Coverage", main ="") -->
+<!-- ``` -->
+
+<!-- ## Individual Coverage (per covariate) -->
+
+<!-- ```{r} -->
+<!-- tmp <- data.frame(coverage = apply(sim2$individual_coverage, 2, mean) , beta = sim2$beta) -->
+<!-- plot(abs(tmp$beta), tmp$coverage, xlab = "True Beta Value", ylab = "Coverage") -->
+<!-- ``` -->
+
+## Elastic Net Implimentation
+
+### Selecting Parameters
+
+```{r}
+set.seed(my_seed)
+n <- 100
+dat <- genDataABN(n = n, p = 3, a = 1, b = 1, rho = .99, beta = 1)
+# dat$X <- std(dat$X)
+alphas <- c(0.000000001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999)
+min_cve <- numeric(length(alphas))
+min_lambdas <- numeric(length(alphas))
+
+for (i in 1:length(alphas)) {
+  
+  set.seed(my_seed)
+  tmp <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", alpha = alphas[i])
+  # plot(tmp) 
+  min_cve[i] <- tmp$cve[tmp$min]
+  min_lambdas[i] <- tmp$lambda.min
+  
+}
+
+alpha <- alphas[which.min(min_cve)]
+lambda <- min_lambdas[which.min(min_cve)]
+sigma2 <- min(min_cve)
+c(lambda, alpha, sigma2)
+```
+
+### Fitting Elastic Net
+
+#### Code for Fitting Augmented Method
+
+```{r}
+find_thresh <- function(x, y) { abs(t(x) %*% y) / length(y) }
+
+univariate_soft_threshold <- function(z_j, lambda) {
+
+    if (z_j > lambda) {
+      return(z_j - lambda)
+    } else if (abs(z_j) <= lambda) {
+      return(0)
+    } else if (z_j < -lambda) {
+      return(z_j + lambda)
+    }
+  
+}
+
+univariate_ridge_threshold <- function(z_j, lambda, alpha) {
+
+    if (z_j > lambda*alpha) {
+      return((z_j - lambda*alpha) / (1 + lambda*(1-alpha)))
+    } else if (abs(z_j) <= lambda*alpha) {
+      return(0)
+    } else if (z_j < -lambda*alpha) {
+      return((z_j + lambda) / (1 + lambda*(1-alpha)))
+    }
+  
+}
+
+
+convergence_check <- function(beta, beta_prev, tol = 1e-12) {
+  
+  all(abs((beta - beta_prev) / (beta_prev + tol)) < tol)
+  
+}
+
+lasso_cd_lambda <- function(X, y, curr_lambda, init, alpha) {
+  
+    l1 <- curr_lambda * alpha
+    l2 <- curr_lambda * (1 - alpha)
+    n <- length(y) 
+    X <- rbind(X, diag(ncol(X)) * sqrt(n*l2))
+    y <- c(y, rep(0, ncol(X)))
+  
+    iter <- 0 
+    converged <- FALSE
+    beta_prev <- beta <- init
+    
+    r_j <- y - (X %*% beta) ## Initial value of r_j
+    
+    while (!converged & iter < 10000) {
+    
+      for (j in 1:ncol(X)) {
+        
+        # z_j <- (t(X[,j]) %*% r_j / n) + beta[j]
+        # beta[j] <- univariate_soft_threshold(z_j, l1)
+        # r_j <- r_j - (beta[j] - beta_prev[j]) * X[,j]
+        if (iter == 0) {
+          z_j <- (t(X[,j]) %*% r_j / n) + beta[j] ## First step ignores augmented data essentially
+          beta[j] <- univariate_soft_threshold(z_j, l1) / (1 + l2)
+          r_j <- r_j - (beta[j] - beta_prev[j]) * X[,j] 
+        } else {
+          z_j <- (t(X[,j]) %*% r_j / n) + beta[j] ## First step ignores augmented data essentially
+          beta[j] <- univariate_soft_threshold(z_j, l1) # / (1 + l2)
+          r_j <- r_j - (beta[j] - beta_prev[j]) * X[,j]
+        }
+        
+      } 
+    
+      iter <- iter + 1
+      converged <- convergence_check(beta, beta_prev)
+      beta_prev <- beta
+      
+    }
+    
+    print(beta)
+    return(beta)
+  
+}
+
+lasso_cd <- function(X, y, original_scale = TRUE, alpha = 1) {
+
+  X_std <- std(X) ## Standardize X
+  scales <- attr(X_std, "scale") ## Get the "scale" to restandardize later
+  my <- mean(y)
+  y <- y - my
+  
+  lambda_max <- max(apply(X_std, 2, find_thresh, y)) / alpha
+  lambda_min <- 1e-4 * lambda_max
+  lambda_seq <- 10^(seq(log(lambda_max, 10), log(lambda_min, 10), length.out = 100)) 
+  
+  ## Setup
+  res <- matrix(nrow = ncol(X_std) + 1, ncol = length(lambda_seq))
+  colnames(res) <- lambda_seq
+  rownames(res) <- c("Intercept", colnames(X_std))
+  
+  for (i in 1:length(lambda_seq)) {
+    if (i == 1) { init <- rep(0, ncol(X_std)) } else { init <- beta }
+
+    curr_lambda <- lambda_seq[i] ## OVERALL LAMBA
+    beta <- lasso_cd_lambda(X_std, y, curr_lambda, init, alpha = alpha)
+    ## Save standardized or unstandardized estimates
+    res[2:nrow(res),i] <- beta * (original_scale / scales + (1 - original_scale))
+    res[1,i] <- mean(y - (X %*% res[2:nrow(res),i])) + my ## Re-solve for intercept
+
+  }
+
+  return(res)
+  
+}
+```
+
+#### Augmented Method
+
+```{r}
+alpha <- .0001
+tmp <- lasso_cd(dat$X, dat$y, alpha = alpha)
+tmp[,100]
+lam <- as.numeric(colnames(tmp)[100])
+## lambdas <- as.numeric(colnames(tmp))
+```
+
+#### Benchmark
+
+```{r}
+ncvreg_tmp <- ncvreg(dat$X, dat$y, penalty = "lasso", eps = 1e-12, alpha = alpha, max.iter = 1e6)
+lmbds <- sort(c(ncvreg_tmp$lambda, lam), decreasing = TRUE)
+ncvreg_tmp <- ncvreg(dat$X, dat$y, penalty = "lasso", eps = 1e-12, alpha = alpha, max.iter = 1e6, lambda = lmbds)
+coef(ncvreg_tmp, lambda = lam)
+```
+
+#### Direct Augmentation Attempt
+
+```{r}
+## Direct augment
+# X_nonaug <- std(dat$X); attr(X_nonaug, "scale")
+X_aug <- std(rbind(dat$X, diag(ncol(dat$X)) * sqrt((length(dat$y))*lam*(1-alpha))))
+y_aug <- c(dat$y, rep(0, ncol(dat$X)))
+
+direct <- ncvreg(X_aug, y_aug, penalty = "lasso")
+coef(direct, lambda = lam*alpha)[-1] / attr(X_aug, "scale")
+```
+
+
+### Bootstrapping Implimentation
+
+```{r}
+## Set inputs
+X <- dat$X
+y <- dat$y
+significance_level <- .8
+
+alpha <- 1e-12
+lambda <- 10
+sigma2 <- 1.341164
+
+lower_p <- (1 - significance_level) / 2
+upper_p <- significance_level + lower_p
+p <- ncol(X)
+n <- length(y)
+
+modes <- uppers <- lowers <- numeric(p)
+
+set.seed(my_seed)
+idx_new <- sample(1:n, replace = TRUE)
+ynew <- y[idx_new]
+ynew <- ynew - mean(ynew)
+xnew <- ncvreg::std(X[idx_new,,drop=FALSE])
+xnew_save <- xnew
+
+ncvreg_tmp <- ncvreg(xnew, ynew, penalty = "lasso", eps = 1e-12, alpha = alpha, max.iter = 1e6)
+lmbds <- sort(c(ncvreg_tmp$lambda, lambda), decreasing = TRUE)
+fit <- ncvreg(xnew, ynew, penalty = "lasso", eps = 1e-12, alpha = alpha, max.iter = 1e6, lambda = lmbds)
+coefs <- coef(fit, lambda = lambda)
+
+ns_index <- attr(xnew, "nonsingular")
+modes <- coefs[-1] ## Coefs only returned for nonsingular columns of X
+
+## Augment data
+xnew <- rbind(xnew, diag(ncol(xnew)) * sqrt(n*(1-alpha)*lambda))
+ynew <- c(ynew, rep(0, ncol(xnew)))
+
+## Point out
+partial_residuals <-  ynew - (coefs[1] + as.numeric(xnew %*% modes) - (xnew * matrix(modes, nrow=nrow(xnew), ncol=ncol(xnew), byrow=TRUE)))
+
+z <- (1/n)*colSums(xnew * partial_residuals)
+se <- sqrt(sigma2 / n) / sqrt(lambda*(1-alpha))
+
+## Tails I am transferring on to (log probability in each tail)
+obs_lw <- pnorm(0, (z + lambda*alpha) / (lambda*(1-alpha)), se, log.p = TRUE)
+obs_up <- pnorm(0, (z - lambda*alpha) / (lambda*(1-alpha)), se, lower.tail = FALSE, log.p = TRUE)
+
+## Find the log density at zero for each tail (This needs to be finite)
+dens0_lw <- dnorm(0, (z + lambda*alpha) / (lambda*(1-alpha)), se, log = TRUE)
+dens0_up <- dnorm(0, (z - lambda*alpha) / (lambda*(1-alpha)), se, log = TRUE)
+dens_adjust <- dens0_lw - dens0_up
+
+dens_adjust_lw <- ifelse(dens_adjust > 0, 0, -dens_adjust)
+dens_adjust_up <- ifelse(dens_adjust < 0, 0, dens_adjust)
+
+obs_p_lw <- obs_lw + dens_adjust_lw
+obs_p_up <- obs_up + dens_adjust_up
+
+frac_lw_log <- ifelse(is.infinite(exp(obs_p_lw - obs_p_up)), 0, obs_p_lw - obs_p_up - log(1 + exp(obs_p_lw - obs_p_up)))
+frac_up_log <- ifelse(is.infinite(exp(obs_p_up - obs_p_lw)), 0, obs_p_up - obs_p_lw - log(1 + exp(obs_p_up - obs_p_lw)))
+
+lower <- ifelse(
+  frac_lw_log >= log(lower_p),
+  qnorm(log(lower_p) + obs_lw - frac_lw_log, (z + lambda*alpha) / (lambda*(1-alpha)), se, log.p = TRUE),
+  qnorm(log(upper_p) + obs_up - frac_up_log, (z - lambda*alpha) / (lambda*(1-alpha)), se, lower.tail = FALSE, log.p = TRUE)
+)
+upper <- ifelse(
+  frac_lw_log >= log(upper_p),
+  qnorm(log(upper_p) + obs_lw - frac_lw_log, (z + lambda*alpha) / (lambda*(1-alpha)), se, log.p = TRUE),
+  qnorm(log(lower_p) + obs_up - frac_up_log, (z - lambda*alpha) / (lambda*(1-alpha)), se, lower.tail = FALSE, log.p = TRUE)
+)
+
+# rescale_original <- FALSE
+# rescale <- (attr(xnew_save, "scale")[ns_index])^(-1)
+# if (!is.null(attr(X, "scale")) & rescale_original) {
+#   rescaleX <-  (attr(X, "scale")[ns_index])^(-1)
+# } else {
+#   rescaleX <- 1
+# }
+# 
+# lowers[ns_index] <- (lower * rescale) * rescaleX
+# uppers[ns_index] <- (upper * rescale) * rescaleX
+# modes[ns_index] <- (modes * rescale) * rescaleX
+# lowers[!(1:length(lowers) %in% ns_index)] <- NA
+# uppers[!(1:length(uppers) %in% ns_index)] <- NA
+# modes[!(1:length(modes) %in% ns_index)] <- NA
+# 
+# ret <- list(lowers, uppers, modes)
+ret <- list(lower, upper, modes)
+names(ret) <- c("lowers", "uppers", "modes")
+ret
+```
+
+
+```{r}
+tmp_ridge <- hdrm::ridge(xnew, ynew)
+coef(tmp_ridge, lambda = 10)
+confint(tmp_ridge, level = .8, lambda = 10)
+```
+
+

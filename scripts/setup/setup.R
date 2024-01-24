@@ -1,4 +1,5 @@
-#unloadNamespace("ncvreg")
+unloadNamespace("hdrm")
+unloadNamespace("ncvreg")
 rm(list=ls())
 .libPaths("./local")
 library(ncvreg)
@@ -22,3 +23,7 @@ nboot <- 1000
 rlaplace <- function(n, rate = 1) {
   rexp(n, rate) * sample(c(-1, 1), n, replace = TRUE)
 }
+
+method <- "quantile"
+methods <- c("mode", "sample", "zs", "disturbed", "zerosample")
+n_methods <- length(methods)
