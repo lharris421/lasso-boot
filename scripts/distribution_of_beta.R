@@ -2,7 +2,6 @@ source("./scripts/setup/setup.R")
 
 n <- 100
 p <- 100
-quantiles <- "zerosample"
 method <- "quantile"
 all_res <- list()
 
@@ -35,7 +34,7 @@ accross_lambda_res <- function(dat, quantiles, method) {
   res <- list()
   for (i in 1:length(lambda_seq)) {
     boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i], nboot = nboot, quantiles = quantiles)
-    res[[i]] <- ci.boot.ncvreg(boot_res, method = method, original_data = dat) %>%
+    res[[i]] <- ci.boot.ncvreg(boot_res, method = method) %>%
       dplyr::mutate(width = (upper - lower), lambda = lambda_seq[i]) %>%
       dplyr::select(variable, width, lambda, estimate, lower, upper) %>%
       dplyr::left_join(truth) %>%
@@ -50,22 +49,25 @@ accross_lambda_res <- function(dat, quantiles, method) {
 
 }
 
-## Sparse
-sparse_beta <- c(rep(-2, 10), rep(-1, 10), rep(2, 10), rep(1, 10), rep(0, 60))
-dat <- gen_data(n = n, p = p, beta = sparse_beta)
-all_res[[1]] <- accross_lambda_res(dat, quantiles, method)
+for (i in 1:length(methods)) {
+  quantiles <- methods[i]
+  ## Sparse
+  sparse_beta <- c(rep(-2, 10), rep(-1, 10), rep(2, 10), rep(1, 10), rep(0, 60))
+  dat <- gen_data(n = n, p = p, beta = sparse_beta)
+  all_res[[1]] <- accross_lambda_res(dat, quantiles, method)
 
-## Laplace
-rt <- 2
-dat <- gen_data(n = n, p = p, beta = rlaplace(p, rate = rt))
-all_res[[2]] <- accross_lambda_res(dat, quantiles, method)
+  ## Laplace
+  rt <- 2
+  dat <- gen_data(n = n, p = p, beta = rlaplace(p, rate = rt))
+  all_res[[2]] <- accross_lambda_res(dat, quantiles, method)
 
-## Normal
-dat <- gen_data(n = n, p = p, beta = rnorm(p, mean = 0, sd = 1))
-all_res[[3]] <- accross_lambda_res(dat, quantiles, method)
+  ## Normal
+  dat <- gen_data(n = n, p = p, beta = rnorm(p, mean = 0, sd = 1))
+  all_res[[3]] <- accross_lambda_res(dat, quantiles, method)
 
-## T
-dat <- gen_data(n = n, p = p, beta = rt(p, 3))
-all_res[[4]] <- accross_lambda_res(dat, quantiles, method)
+  ## T
+  dat <- gen_data(n = n, p = p, beta = rt(p, 3))
+  all_res[[4]] <- accross_lambda_res(dat, quantiles, method)
 
-save(all_res, file = glue("./rds/distribution_of_beta_{quantiles}_{method}_n{n}_p{p}.rds"))
+  save(all_res, file = glue("./rds/distribution_of_beta_{quantiles}_{method}_n{n}_p{p}.rds"))
+}

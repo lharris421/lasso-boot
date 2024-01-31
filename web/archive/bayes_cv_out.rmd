@@ -1,0 +1,262 @@
+---
+title: "Modified EB Boot"
+author: "Logan Harris"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ncvreg)
+library(statmod)
+library(ggplot2)
+
+eb_boot <- function(beta, p = 60, b = 2, n = 100, niter = 100) {
+  
+  ## set.seed(12345)
+  dat <- genDataABN(beta = beta, p = p, a = length(beta), b = b, n = n)
+  
+  tbeta <- dat$beta
+  X <- dat$X
+  y <- dat$y
+  
+  cv_res <- cv.ncvreg(X, y, penalty = "lasso")
+  sigma2 <- cv_res$cve[cv_res$lambda == cv_res$lambda.min]
+  lam <- cv_res$lambda.min
+  
+  lowers <- matrix(nrow = niter, ncol = length(tbeta))
+  uppers <- matrix(nrow = niter, ncol = length(tbeta))
+  for (i in 1:niter) {
+    
+    idx_new <- sample(1:length(y), replace = TRUE)
+    ynew <- y[idx_new]
+    xnew <- X[idx_new,,drop=FALSE]
+    
+    fit <- ncvreg(xnew, ynew, penalty = "lasso", lambda.min = lam*.1)
+    print(fit$lambda)
+    print(lam)
+    coefs <- coef(fit, lambda = lam)
+    
+    t2i_scale <- lam^2
+    
+    ## Beta specific
+    for (j in 1:length(tbeta)) {
+      
+      r <- ynew - (coefs[1] + xnew[,-j] %*% coefs[-1][-j])
+      beta <- coefs[-1][j]
+      tau2i_mu <- sqrt((sigma2*lam^2) / beta^2)
+      tau2 <- 1 / rinvgauss(1, tau2i_mu, t2i_scale)
+      
+      A <- (t(xnew[,j, drop=FALSE]) %*% xnew[,j,drop=FALSE]) + (1/tau2)
+      mu <- solve(A)*(t(xnew[,j,drop=FALSE]) %*% r)
+      ci <- qnorm(c(.1, .9), mu, sqrt(sigma2*solve(A)))
+      lowers[i,j] <- ci[1]; uppers[i,j] <- ci[2]
+      
+    }
+    
+  }
+  
+  return(list("lower" = lowers, "upper" = uppers, "truth" = tbeta))
+  
+}
+
+plot_boot <- function(eb_boot) {
+  
+  lowers <- apply(eb_boot[["lower"]], 2, mean)
+  uppers <- apply(eb_boot[["upper"]], 2, mean)
+  plot_res <- data.frame(truth = eb_boot[["truth"]], grp = names(eb_boot[["truth"]]), lower = lowers, upper = uppers)
+  
+  plot_res %>%
+    ggplot() +
+    geom_point(aes(x = truth, y = grp)) +
+    geom_errorbar(aes(xmin = lower, xmax = upper, y = grp)) +
+    theme_bw()
+
+}
+
+eb_boot_sim <- function(beta, p = 60, b = 2, n = 100, niter = 100, nboot = 100) {
+
+  overall_cov <- numeric(nboot)
+  indiv_cov <- matrix(nrow = nboot, ncol = p)
+  
+  pb <- txtProgressBar(1, nboot, style=3)
+  
+  ## p, beta, n
+  for (iter in 1:nboot) {
+  
+    res <- eb_boot(beta = beta, p = p, b = b, n = n, niter = niter)
+    
+    lower_int <- apply(res[["lower"]], 2, mean)
+    upper_int <- apply(res[["upper"]], 2, mean)
+    tbeta <- res[["truth"]]
+    
+    indiv_cov[iter,] <- tbeta >= lower_int & tbeta <= upper_int
+    overall_cov[iter] <- mean(indiv_cov[iter,])
+    
+    setTxtProgressBar(pb, iter)
+  
+  }
+  
+  return(list("overall_cov" = overall_cov, "indiv_cov" = indiv_cov, "truth" = tbeta))
+
+}
+```
+
+Interval widths are set to be 80%.
+
+# One Covariate
+
+## Beta = 0
+
+### Single Example
+
+```{r}
+beta0 <- eb_boot(beta = 0, p = 1, b = 0, n = 30, niter = 100)
+c(mean(beta0$lower), mean(beta0$upper))
+```
+
+### Coverage
+
+```{r, eval=FALSE}
+set.seed(1234)
+res <- eb_boot_sim(beta = 0, p = 1, b = 0, n = 30, niter = 100, nboot = 100); save(res, file = "beta0_cov.rds")
+mean(res$overall_cov)
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/beta0_cov.rds")
+mean(res$overall_cov)
+```
+
+
+## Beta = 3
+
+```{r}
+beta0 <- eb_boot(beta = 3, p = 1, b = 0, n = 30, niter = 100)
+c(mean(beta0$lower), mean(beta0$upper))
+```
+
+```{r, eval = FALSE}
+set.seed(1234)
+res <- eb_boot_sim(beta = 3, p = 1, b = 0, n = 30, niter = 100, nboot = 100); save(res, file = "beta3_cov.rds")
+mean(res$overall_cov)
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/beta3_cov.rds")
+mean(res$overall_cov)
+```
+
+# Many Covariates
+
+## Not High Dimensional
+
+### Single Example
+
+```{r}
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5))
+plot_boot(tmp)
+```
+
+
+### Coverage
+
+```{r, eval = FALSE}
+set.seed(123)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5))
+save(res, file = "many.rds")
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/many.rds")
+```
+
+#### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov)
+```
+
+#### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage)
+```
+
+## n = p
+
+Here, I simply increase the number of true zeros. What I was interested in seeing was: 1) does the increase in sparsity effect the coverage of the non-zero coefficients, 2) Does it impact the marginal coverage rate?
+
+### Single Example
+
+```{r}
+tmp <- eb_boot(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100)
+plot_boot(tmp)
+```
+
+
+### Coverage
+
+```{r, eval = FALSE}
+set.seed(123)
+res <- eb_boot_sim(beta = c(2, 1, 0.5, -2, -1, -0.5), p = 100)
+save(res, file = "nep.rds")
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/nep.rds")
+```
+
+#### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov)
+```
+
+#### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage)
+```
+
+## Increating betas, Not High Dimensional
+
+
+### Single Example
+
+```{r}
+tmp <- eb_boot(beta = c(0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5))
+plot_boot(tmp)
+```
+
+### Coverage
+
+```{r, eval = FALSE}
+set.seed(123)
+res <- eb_boot_sim(beta = c(0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5))
+save(res, file = "increasing.rds")
+```
+
+```{r, echo=FALSE}
+load("/Users/loganharris/github/lasso-boot/web/data/increasing.rds")
+```
+
+
+#### Overall Coverage (per bootstrap)
+
+```{r}
+mean(res$overall_cov)
+hist(res$overall_cov)
+```
+
+#### Individual Coverage (per covariate)
+
+```{r}
+tmp <- data.frame(coverage = apply(res$indiv_cov, 2, mean) , beta = res$truth)
+plot(abs(tmp$beta), tmp$coverage)
+```

@@ -7,6 +7,7 @@ nboot <- 1000
 
 res_width <- res_coverage <- res_time <- res_lambda <- list()
 all_info <- list()
+# method <- "bucketfill"
 
 for (i in 1:length(ns)) {
 
@@ -35,7 +36,7 @@ for (i in 1:length(ns)) {
       start <- Sys.time()
       lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = nboot, quantiles = quantiles, max.iter = 1e6)
       times[j,k] <- as.numeric(difftime(Sys.time(), start, units = "secs"))
-      lassoboot_ci <- ci.boot.ncvreg(lassoboot, method = method, original_data = dat)
+      lassoboot_ci <- ci.boot.ncvreg(lassoboot, method = method)
       lassoboot_coverage <- lassoboot_ci$lower <= laplace_beta & laplace_beta <= lassoboot_ci$upper
       lambdas[j,k] <- lassoboot$lambda
       widths[j,k] <- median(lassoboot_ci$upper - lassoboot_ci$lower)
@@ -59,4 +60,4 @@ for (i in 1:length(ns)) {
 
 }
 
-save(res_time, res_coverage, res_lambda, res_width, ns, all_info, file = glue("./rds/lassoboot_comparison_laplace_100_all_{method}_1000_2.rds"))
+save(res_time, res_coverage, res_lambda, res_width, ns, all_info, file = glue("./rds/lassoboot_comparison_laplace_100_all_{method}_1000.rds"))
