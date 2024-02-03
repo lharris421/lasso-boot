@@ -3,6 +3,7 @@ source("./scripts/setup/setup.R")
 n <- 100
 p <- 100
 method <- "quantile"
+methods <- "zerosample2"
 all_res <- list()
 
 ## Function
@@ -18,7 +19,6 @@ accross_lambda_res <- function(dat, quantiles, method) {
   }
 
   group_names <- c("Small", "Moderate", "Large")
-
 
   lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
   lambda_min <- lambda_max * 0.001
@@ -51,23 +51,28 @@ accross_lambda_res <- function(dat, quantiles, method) {
 
 for (i in 1:length(methods)) {
   quantiles <- methods[i]
+
   ## Sparse
+  set.seed(my_seed)
   sparse_beta <- c(rep(-2, 10), rep(-1, 10), rep(2, 10), rep(1, 10), rep(0, 60))
   dat <- gen_data(n = n, p = p, beta = sparse_beta)
   all_res[[1]] <- accross_lambda_res(dat, quantiles, method)
 
   ## Laplace
   rt <- 2
+  set.seed(my_seed)
   dat <- gen_data(n = n, p = p, beta = rlaplace(p, rate = rt))
   all_res[[2]] <- accross_lambda_res(dat, quantiles, method)
 
   ## Normal
+  set.seed(my_seed)
   dat <- gen_data(n = n, p = p, beta = rnorm(p, mean = 0, sd = 1))
   all_res[[3]] <- accross_lambda_res(dat, quantiles, method)
 
   ## T
+  set.seed(my_seed)
   dat <- gen_data(n = n, p = p, beta = rt(p, 3))
   all_res[[4]] <- accross_lambda_res(dat, quantiles, method)
 
-  save(all_res, file = glue("./rds/distribution_of_beta_{quantiles}_{method}_n{n}_p{p}.rds"))
+  save(all_res, file = glue("./rds/distribution_of_beta_n{n}_p{p}_{quantiles}.rds"))
 }

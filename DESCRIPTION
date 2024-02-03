@@ -5,15 +5,6 @@ Date: 2023-05-27
 Authors@R: person("Logan", "Harris", role=c("aut","cre"), email="logan-harris@uiowa.edu")
 Description: More ideas on what to focus on.
 Depends:
-  data.table,
-  dplyr,
-  ggplot2,
-  hdrm,
-  knitr,
-  magrittr,
-  Matrix,
-  stringr,
-  tictoc
 License: GPL-3
 LazyData: TRUE
 VignetteBuilder: knitr

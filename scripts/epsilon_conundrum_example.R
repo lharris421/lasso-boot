@@ -14,7 +14,13 @@ cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso")
 
 res <- list()
 for (i in 1:length(methods)) {
+  set.seed(my_seed)
   res[[i]] <- boot.ncvreg(dat$X, dat$y, lambda = lambda, sigma2 = sigma2, verbose = TRUE, nboot = nboot, quantiles = methods[i])
 }
+names(res) <- methods
 
-save(dat, res, methods, file = glue("./rds/lassoboot_comparison_traditional_n{n}_p{p}.rds"))
+for (i in 1:length(methods)) {
+  example <- res[[methods[i]]]
+  save(example, file = glue("./rds/epsilon_conundrum_example_{methods[i]}.rds"))
+}
+

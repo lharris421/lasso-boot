@@ -3,7 +3,7 @@ source("./scripts/setup/setup.R")
 rt <- 2
 ns <- c(30, 60, 120)
 p <- 60
-quantiles <- "zerosample"
+quantiles <- "zerosample2"
 method <- "quantile"
 
 plot_res <- list()
@@ -13,6 +13,8 @@ for (j in 1:length(ns)) {
 
   true_lambda <- (1 / n) * rt
 
+  current_seed <- my_seed + n
+  set.seed(current_seed)
   laplace_beta <- rlaplace(p, rate = rt)
   dat <- gen_data(n = n, p = p, beta = laplace_beta)
 
@@ -30,7 +32,7 @@ for (j in 1:length(ns)) {
   res <- list()
   for (i in 1:length(lambda_seq)) {
     boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i], nboot = nboot, quantiles = quantiles)
-    res[[i]] <- ci.boot.ncvreg(boot_res, method = method, original_data = dat) %>%
+    res[[i]] <- ci.boot.ncvreg(boot_res, method = method) %>%
       dplyr::mutate(width = (upper - lower), lambda = lambda_seq[i]) %>%
       dplyr::select(variable, width, lambda, estimate, lower, upper)
     if (any(is.na(res[[i]]$lower))) stop("Something wrong")
@@ -45,4 +47,4 @@ for (j in 1:length(ns)) {
 
 }
 
-save(plot_res, file = glue("./rds/across_lambda_coverage_laplace_{quantiles}_{method}.rds"))
+save(plot_res, file = glue("./rds/across_lambda_coverage_laplace_{quantiles}.rds"))
