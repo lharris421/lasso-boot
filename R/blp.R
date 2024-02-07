@@ -9,7 +9,7 @@ blp <- function(dat, alpha = 0.2) {
       mutate(estimate = fit.lasso.allinfo$bhat)
     lam <- fit.lasso.allinfo$lambda
     sig <- fit.lasso.allinfo$sigma
-    res <- list("confidence_interval" = ci, "lambda" = lam, "sigma" = sigma)
+    res <- list("confidence_interval" = ci, "lambda" = lam, "sigma" = sig)
     return(res)
   }, error = function(e) {
     print(e);

@@ -3,7 +3,6 @@ source("./scripts/setup/setup.R")
 n <- 100
 p <- 100
 method <- "quantile"
-methods <- "zerosample2"
 all_res <- list()
 
 ## Function

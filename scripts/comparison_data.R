@@ -1,7 +1,7 @@
 source("./scripts/setup/setup.R")
 
 # method <- "bucketfill"
-methods <- c("zerosample2", "selective_inference", "blp")
+methods <- c("zerosample1", "zerosample2", "sample", "debiased", "acceptreject", "traditional", "blp", "selective_inference")
 n_methods <- length(methods)
 
 # dataset <- "Scheetz2006"
@@ -24,6 +24,7 @@ cis <- list()
 for (i in 1:n_methods) {
   print(methods[i])
   set.seed(my_seed)
+  start <- Sys.time()
   if (methods[i] == "selective_inference") {
     ### Selective Inference
     res <- selective_inference(dat, estimate_sigma = TRUE)
@@ -36,6 +37,7 @@ for (i in 1:n_methods) {
       mutate(method = methods[i])
     res <- list("confidence_interval" = ci, lambda, "sigma" = sqrt(sigma2))
   }
+  print(as.numeric(difftime(Sys.time(), start, units = "secs")))
 
   save(res, file = glue("./rds/{dataset}_{methods[i]}.rds"))
 }

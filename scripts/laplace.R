@@ -6,10 +6,7 @@ rt <- 2
 nboot <- 1000
 
 per_var <- per_dataset <- list()
-# method <- "bucketfill"
-# methods <- c("selective_inference")
-# methods <- "blp"
-methods <- c("traditional", "zerosample1", "sample", "debiased", "acceptreject")
+methods <- c("zerosample1", "zerosample2", "sample", "debiased", "acceptreject", "traditional", "blp", "selective_inference")
 n_methods <- length(methods)
 
 for (i in 1:length(ns)) {
@@ -31,7 +28,7 @@ for (i in 1:length(ns)) {
     dat$X <- ncvreg::std(dat$X)
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
 
-    if (!(any(methods %in% c("selective_inference", "blp")))) {
+    if (any(!(methods %in% c("selective_inference", "blp")))) {
       cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso")
       lambda <- cv_fit$lambda.min
       sigma2 <- cv_fit$cve[cv_fit$min]

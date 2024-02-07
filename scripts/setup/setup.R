@@ -27,6 +27,6 @@ rlaplace <- function(n, rate = 1) {
 }
 
 method <- "quantile"
-# methods <- c("traditional", "sample", "debiased", "acceptreject", "zerosample1", "zerosample2")
-methods <- c("traditional", "sample", "debiased", "zerosample2")
+methods <- c("traditional", "sample", "debiased", "acceptreject", "zerosample1", "zerosample2")
+# methods <- c("traditional", "sample", "debiased", "zerosample2")
 n_methods <- length(methods)

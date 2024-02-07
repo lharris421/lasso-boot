@@ -4,7 +4,6 @@ source("./scripts/setup/setup.R")
 n <- 50
 p <- 25
 method <- "quantile"
-methods <- "zerosample2"
 methods <- c("ridge", methods)
 
 ## Selected example
