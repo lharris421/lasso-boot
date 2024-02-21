@@ -1,6 +1,6 @@
 source("./scripts/setup/setup.R")
 
-# method <- "bucketfill"
+# ci_method <- "bucketfill"
 methods <- c("zerosample1", "zerosample2", "sample", "debiased", "acceptreject", "traditional", "blp", "selective_inference")
 n_methods <- length(methods)
 
@@ -32,8 +32,8 @@ for (i in 1:n_methods) {
     ### HDI - Across a range of lambda values
     res <- blp(dat)
   } else {
-    lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = TRUE, quantiles = methods[i], nboot = nboot, lambda = lambda, sigma2 = sigma2)
-    ci <- ci.boot.ncvreg(lassoboot, method = method) %>%
+    lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = TRUE, method = methods[i], nboot = nboot, lambda = lambda, sigma2 = sigma2)
+    ci <- ci.boot.ncvreg(lassoboot, ci_method = ci_method) %>%
       mutate(method = methods[i])
     res <- list("confidence_interval" = ci, lambda, "sigma" = sqrt(sigma2))
   }

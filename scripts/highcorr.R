@@ -3,7 +3,7 @@ source("./scripts/setup/setup.R")
 ## Parameters
 n <- 50
 p <- 25
-method <- "quantile"
+ci_method <- "quantile"
 methods <- c("ridge", methods)
 
 ## Selected example
@@ -32,8 +32,8 @@ for (i in 1:100) {
         mutate(group = i)
     } else {
       ### Lasso-boot sample
-      lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, max.iter = 1e9, quantiles = methods[j], nboot = nboot)
-      cis[[j]][[i]] <- ci.boot.ncvreg(lassoboot, method = method) %>%
+      lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, max.iter = 1e9, method = methods[j], nboot = nboot)
+      cis[[j]][[i]] <- ci.boot.ncvreg(lassoboot, ci_method= ci_method) %>%
         dplyr::mutate(method = methods[j], group = i)
     }
 
