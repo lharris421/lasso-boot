@@ -152,3 +152,7 @@ for (i in 1:length(methods)) {
 
   save(all_res, avg_lambdas, file = glue("./rds/distribution_of_beta_SNR{SNR}_{corr}_rho{rho*100}_alpha{alpha*100}_p{100}.rds"))
 }
+
+
+# n = 101 lm bootstrap
+# - general problem
