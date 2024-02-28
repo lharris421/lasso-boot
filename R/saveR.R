@@ -2,9 +2,10 @@ library(uuid)
 library(dplyr)
 library(tidyr)
 
-save_objects <- function(folder, args_list, ...) {
+save_objects <- function(folder, args_list, overwrite = FALSE, ...) {
   # Read the crosswalk CSV
   crosswalk_path <- file.path(folder, "crosswalk.csv")
+  ## May want to consider intialization later
   crosswalk <- read.csv(crosswalk_path, stringsAsFactors = FALSE)
 
   # Validate arguments
@@ -14,13 +15,30 @@ save_objects <- function(folder, args_list, ...) {
     stop("Invalid arguments provided: ", paste(invalid_args, collapse = ", "))
   }
 
-  # Generate UUIDv4 and timestamp
-  uuid4 <- UUIDgenerate()
-  timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  # Check for existing parameters
+  existing <- check_parameters_existence(folder, args_list, check_for = "existing")
+  if (!is.null(existing)) {
+    if (overwrite) {
+      message("Overwriting existing record.")
+      uuid4 <- existing$uuid4[1] # Assuming the first match is the one to overwrite
+    } else {
+      warning("Existing record found. Set 'overwrite = TRUE' to overwrite.")
+      return(invisible())
+    }
+  } else {
+    # Generate UUIDv4
+    uuid4 <- UUIDgenerate()
+  }
 
-  # Add UUIDv4 and timestamp to the args_list
+  # Generate UUIDv4 and timestamp
+  timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   args_list$uuid4 <- uuid4
   args_list$timestamp <- timestamp
+
+  # Update or append the new row to the crosswalk
+  if (overwrite) {
+    crosswalk <- crosswalk[crosswalk$uuid4 != uuid4, ] # Remove old record
+  }
 
   # Complete the missing columns with NA
   missing_cols <- setdiff(valid_cols, names(args_list))
@@ -34,47 +52,30 @@ save_objects <- function(folder, args_list, ...) {
   save(..., file = file.path(folder, paste0(uuid4, ".rds")))
 }
 
-read_objects <- function(folder, params_list) {
+read_objects <- function(folder, params_grid) {
+
+  check_parameters_existence(folder, params_grid, check_for = "missing", halt = TRUE)
+
   # Read the crosswalk CSV
   crosswalk_path <- file.path(folder, "crosswalk.csv")
   crosswalk <- read.csv(crosswalk_path, stringsAsFactors = FALSE)
 
+  # Identify columns in crosswalk that are not all NA and are in params_list
+  valid_cols <- names(crosswalk)[colSums(!is.na(crosswalk)) > 0 & names(crosswalk) %in% names(params_grid)]
   # Expand the parameters to all combinations
-  params_combinations <- expand.grid(params_list)
+  params_combinations <- params_grid[valid_cols]
 
-  # Filter the crosswalk based on the combinations
-  filtered_crosswalk <- crosswalk
-  for (param_name in names(params_combinations)) {
-    param_values <- unique(params_combinations[[param_name]])
-    if (param_name %in% names(crosswalk)) {
-      filtered_crosswalk <- filtered_crosswalk[filtered_crosswalk[[param_name]] %in% param_values, ]
-    } else {
-      warning("Parameter not found in crosswalk: ", param_name)
-    }
-  }
+  # Perform an inner join to find matching rows in crosswalk
+  uuids <- inner_join(crosswalk, params_combinations, by = names(params_combinations)) %>%
+    pull(uuid4)
+  print(uuids)
 
   # Read the corresponding .rds files and bind them
-  all_data <- lapply(filtered_crosswalk$uuid4, function(uuid) {
-    file_path <- file.path(folder, paste0(uuid, ".rds"))
-    if (file.exists(file_path)) {
-      load(file_path)  # Changed from readRDS to load
-      list(per_var_all, per_dataset_all)  # Assuming these are the common objects in your RDS files
-    } else {
-      warning("File not found: ", file_path)
-      NULL
-    }
-  })
-
-  # Optionally, bind the data together if needed
-  # This step depends on the structure of your .rds files and how you want to combine them
-  # Example for row-binding if your objects are data frames
-  all_data_combined <- do.call(rbind, lapply(all_data, function(x) x$per_var_all))
-  # Repeat for per_dataset_all or any other objects as needed
-
-  return(all_data_combined)
+  for (i in 1:length(uuids)) {
+    file_path <- file.path(folder, paste0(uuids[i], ".rds"))
+    load(file_path, envir = globalenv())
+  }
 }
-
-
 
 check_parameters_existence <- function(folder, params_list, check_for = c("missing", "existing"), halt = FALSE) {
   # Validate 'check_for' option

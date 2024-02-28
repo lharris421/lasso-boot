@@ -1,20 +1,22 @@
 source("./scripts/setup/setup.R")
 
 ## Data arguments
-data_type <- "laplace"
-rt <- 2
+data_type <- "abn"
+# rt <- 2
 corr <- "exchangeable"
-rho <- 0
-rho.noise <- NA
-a <- b <- sd <- NA
+rho <- 0.80
+rho.noise <- rho - .3
+a <- 5
+b <- 2
+sd <- NA
 p <- 100
-# ns <- p * c(0.5, 1, 4)
-ns <- p * c(.5)
+ns <- p * c(0.5, 1, 4)
+# ns <- p * c(.5)
 nboot <- 1000
 simulations <- 100
 alpha <- .2
 SNR <- 1
-modifier <- "tls"
+modifier <- NA
 
 methods <- c("zerosample2")
 nboot <- ifelse(all(methods == "fullconditional"), 1, nboot)
@@ -36,11 +38,11 @@ arg_list <- list(data = data_type,
      lambda = "cv",
      ci_method = ci_method,
      nominal_coverage = alpha * 100,
-     modifier = modifier,
+     # modifier = NA,
      p = p)
 
-new_folder <- "/Users/loganharris/github/lasso-boot/new_rds"
-check_parameters_existence(new_folder, arg_list, check_for = "existing", halt = TRUE)
+rds_folder <- "/Users/loganharris/github/lasso-boot/rds"
+check_parameters_existence(rds_folder, expand.grid(arg_list), check_for = "existing", halt = TRUE)
 
 per_var <- per_dataset <- list()
 for (i in 1:length(ns)) {
@@ -179,14 +181,14 @@ for (i in 1:length(methods)) {
          a = ifelse(data_type == "abn", a, NA),
          b = ifelse(data_type == "abn", a, NA),
          correlation_structure = corr,
-         correlation = rho,
-         correlation_noise = ifelse(data_type == "normal", rho.noise, NA),
+         correlation = rho * 100,
+         correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
          method = methods[i],
          ci_method = ci_method,
          nominal_coverage = alpha * 100,
-         modifier = modifier,
+         # modifier = modifier,
          p = p)
-    save_objects(folder = new_folder, args_list = args_list, per_var_n, per_dataset_n)
+    save_objects(folder = rds_folder, args_list = args_list, overwrite = FALSE, per_var_n, per_dataset_n)
   }
 }
 
