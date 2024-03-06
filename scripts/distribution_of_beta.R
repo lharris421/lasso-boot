@@ -10,6 +10,7 @@ corr <- "exchangeable"
 rho <- 0
 alpha <- 0.2
 niter <- 100
+data_type <- "various"
 
 ## Function
 accross_lambda_res <- function(dat, ci_method, method) {
@@ -35,10 +36,11 @@ accross_lambda_res <- function(dat, ci_method, method) {
   lambda_seq <- 10^(seq(log(lambda_max, 10), log(lambda_min, 10), length.out = 10))
 
   cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", lambda.min = 0.001)
-  lambda_min <- cv_fit$lambda.min / lambda_max
+  # lambda_min <- cv_fit$lambda.min / lambda_max
   # if (!any(abs(lambda_min - lambda_seq) < 1e-4)) {
   #   lambda_seq <- sort(c(lambda_seq, lambda_min), decreasing = TRUE)
   # }
+  lambda_seq <- c(lambda_seq, cv_fit$lambda.min)
 
   res <- list()
   for (i in 1:length(lambda_seq)) {
@@ -52,7 +54,7 @@ accross_lambda_res <- function(dat, ci_method, method) {
       )
   }
 
-  return(list("plot_data" = do.call("rbind", res), "lambda_min" = lambda_min))
+  return(list("plot_data" = do.call("rbind", res), "lambda_min" = cv_fit$lambda.min / lambda_max))
 
 }
 
@@ -150,5 +152,21 @@ for (i in 1:length(methods)) {
   all_res[[6]] <- do.call(rbind, tmp)
   avg_lambdas[6] <- mean(lambdas)
 
-  save(all_res, avg_lambdas, file = glue("./rds/distribution_of_beta_SNR{SNR}_{corr}_rho{rho*100}_alpha{alpha*100}_p{100}.rds"))
+  args_list <- list(data = data_type,
+                    n = p,
+                    snr = SNR,
+                    sd = ifelse(data_type == "normal", sd, NA),
+                    rate = ifelse(data_type == "laplace", rt, NA),
+                    a = ifelse(data_type == "abn", a, NA),
+                    b = ifelse(data_type == "abn", b, NA),
+                    correlation_structure = corr,
+                    correlation = rho * 100,
+                    correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
+                    method = methods[i],
+                    ci_method = ci_method,
+                    nominal_coverage = alpha * 100,
+                    lambda = "across",
+                    # modifier = modifier,
+                    p = p)
+  save_objects(folder = rds_folder, args_list = args_list, overwrite = TRUE, all_res, avg_lambdas)
 }

@@ -29,6 +29,7 @@ selected_example <- sample(1:100, 1)
 
 cis <- list()
 examples <- list()
+coverages <- list()
 current_seed <- my_seed
 for (i in 1:100) {
 
@@ -55,6 +56,11 @@ for (i in 1:100) {
         dplyr::mutate(method = arg_list$method[j], group = i)
     }
 
+    coverages[[j]][[i]] <- cis[[j]][[i]] %>%
+      mutate(truth = dat$beta, covered = lower <= truth & upper >= truth) %>%
+      pull(covered) %>%
+      mean()
+
     if (i == selected_example) {
       if (arg_list$method[j] == "ridge") {
         examples[[j]] <- cbind(confint(ridge_cv$fit, level = 1 - alpha, lambda = ridge_cv$lambda.min), "Estimate" = coef(ridge_cv$fit, lambda = ridge_cv$lambda.min))
@@ -68,6 +74,7 @@ for (i in 1:100) {
 }
 names(cis) <- arg_list$method
 names(examples) <- arg_list$method
+names(coverages) <- arg_list$method
 
 for (i in 1:length(arg_list$method)) {
   confidence_interval <- cis[[arg_list$method[i]]]
@@ -87,6 +94,6 @@ for (i in 1:length(arg_list$method)) {
                    ci_method = "quantile",
                    nominal_coverage = alpha * 100,
                    modifier = NA)
-  save_objects(folder = new_folder, args_list = alist, confidence_interval, example)
+  save_objects(folder = new_folder, args_list = alist, confidence_interval, example, coverages, overwrite = TRUE)
 }
 

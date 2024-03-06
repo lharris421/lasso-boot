@@ -4,14 +4,14 @@ source("./scripts/setup/setup.R")
 data_type <- "abn"
 # rt <- 2
 corr <- "exchangeable"
-rho <- 0.80
-rho.noise <- rho - .3
+rho <- 0.99
+rho.noise <- 0.99
 a <- 5
 b <- 2
-sd <- NA
+# sd <- 1
 p <- 100
 ns <- p * c(0.5, 1, 4)
-# ns <- p * c(.5)
+# ns <- p * 30
 nboot <- 1000
 simulations <- 100
 alpha <- .2
@@ -19,30 +19,28 @@ SNR <- 1
 modifier <- NA
 
 methods <- c("zerosample2")
-nboot <- ifelse(all(methods == "fullconditional"), 1, nboot)
-ci_method <- ifelse(all(methods == "fullconditional"), "identity", ci_method)
+# nboot <- ifelse(all(methods == "fullconditional"), 1, nboot)
+# ci_method <- ifelse(all(methods == "fullconditional"), "identity", ci_method)
 n_methods <- length(methods)
 
-arg_list <- list(data = data_type,
-     n = ns,
-     snr = SNR,
-     sd = ifelse(data_type == "normal", sd, NA),
-     rate = ifelse(data_type == "laplace", rt, NA),
-     a = ifelse(data_type == "abn", a, NA),
-     b = ifelse(data_type == "abn", b, NA),
-     df = ifelse(data_type == "t", df, NA),
-     correlation_structure = corr,
-     correlation = rho,
-     correlation_noise = ifelse(data_type == "normal", rho.noise, NA),
-     method = methods,
-     lambda = "cv",
-     ci_method = ci_method,
-     nominal_coverage = alpha * 100,
-     # modifier = NA,
-     p = p)
+args_list <- list(data = data_type,
+                  n = ns,
+                  snr = SNR,
+                  sd = ifelse(data_type == "normal", sd, NA),
+                  rate = ifelse(data_type == "laplace", rt, NA),
+                  a = ifelse(data_type == "abn", a, NA),
+                  b = ifelse(data_type == "abn", b, NA),
+                  correlation_structure = corr,
+                  correlation = rho * 100,
+                  correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
+                  method = methods,
+                  ci_method = ci_method,
+                  nominal_coverage = alpha * 100,
+                  # modifier = modifier,
+                  p = p)
 
 rds_folder <- "/Users/loganharris/github/lasso-boot/rds"
-check_parameters_existence(rds_folder, expand.grid(arg_list), check_for = "existing", halt = TRUE)
+check_parameters_existence(rds_folder, args_list, check_for = "existing", halt = TRUE)
 
 per_var <- per_dataset <- list()
 for (i in 1:length(ns)) {
@@ -132,9 +130,9 @@ for (i in 1:length(ns)) {
       } else {
 
         if (is.na(modifier)) {
-          lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = nboot, method = methods[k], max.iter = 1e8, lambda = lambda, sigma2 = sigma2) ## add alpha if running full conditional
+          lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = TRUE, nboot = nboot, method = methods[k], max.iter = 1e8, lambda = lambda, sigma2 = sigma2) ## add alpha if running full conditional
         } else {
-          lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = nboot, method = methods[k], max.iter = 1e6, lambda = lambda, sigma2 = sigma2, lambda.min = lambda_min)
+          lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = nboot, method = methods[k], max.iter = 1e8, lambda = lambda, sigma2 = sigma2, lambda.min = lambda_min)
         }
         ci <- ci.boot.ncvreg(lassoboot, ci_method = ci_method, alpha = alpha, original_data = dat)
         lam <- lambda
@@ -179,7 +177,7 @@ for (i in 1:length(methods)) {
          sd = ifelse(data_type == "normal", sd, NA),
          rate = ifelse(data_type == "laplace", rt, NA),
          a = ifelse(data_type == "abn", a, NA),
-         b = ifelse(data_type == "abn", a, NA),
+         b = ifelse(data_type == "abn", b, NA),
          correlation_structure = corr,
          correlation = rho * 100,
          correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
