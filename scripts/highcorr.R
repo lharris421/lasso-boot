@@ -16,13 +16,13 @@ arg_list <- list(data = data_type,
                  correlation_structure = "exchangeable",
                  correlation = 0.99,
                  correlation_noise = ifelse(data_type == "abn", 0, NA),
-                 method = c("ridge", "zerosample2"),
-                 ci_method = "quantile",
+                 method = c("debiased"),
+                 ci_method = "mvn",
                  nominal_coverage = alpha * 100,
                  modifier = modifier)
 
-new_folder <- "/Users/loganharris/github/lasso-boot/new_rds"
-check_parameters_existence(new_folder, arg_list, check_for = "existing", halt = TRUE)
+rds_folder <- "/Users/loganharris/github/lasso-boot/rds"
+check_parameters_existence(rds_folder, arg_list, check_for = "existing", halt = TRUE)
 
 ## Selected example
 selected_example <- sample(1:100, 1)
@@ -42,6 +42,7 @@ for (i in 1:100) {
     set.seed(current_seed)
     if (i == 1) {
       cis[[j]] <- list()
+      coverages[[j]] <- list()
     }
     if (arg_list$method[j] == "ridge") {
       ### Ridge
@@ -60,6 +61,7 @@ for (i in 1:100) {
       mutate(truth = dat$beta, covered = lower <= truth & upper >= truth) %>%
       pull(covered) %>%
       mean()
+    print(coverages[[j]][[i]])
 
     if (i == selected_example) {
       if (arg_list$method[j] == "ridge") {
@@ -76,6 +78,8 @@ names(cis) <- arg_list$method
 names(examples) <- arg_list$method
 names(coverages) <- arg_list$method
 
+mean(as.numeric(coverages[[j]]))
+
 for (i in 1:length(arg_list$method)) {
   confidence_interval <- cis[[arg_list$method[i]]]
   example <- examples[[arg_list$method[i]]]
@@ -90,10 +94,9 @@ for (i in 1:length(arg_list$method)) {
                    correlation_structure = "exchangeable",
                    correlation = 0.99,
                    correlation_noise = ifelse(data_type == "abn", 0, NA),
-                   method = c("ridge", "zerosample2")[i],
-                   ci_method = "quantile",
-                   nominal_coverage = alpha * 100,
-                   modifier = NA)
-  save_objects(folder = new_folder, args_list = alist, confidence_interval, example, coverages, overwrite = TRUE)
+                   method = c("debiased")[i],
+                   ci_method = "mvn",
+                   nominal_coverage = alpha * 100)
+  save_objects(folder = rds_folder, args_list = alist, confidence_interval, example, coverages, overwrite = TRUE)
 }
 

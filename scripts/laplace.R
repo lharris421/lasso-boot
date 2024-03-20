@@ -1,17 +1,17 @@
 source("./scripts/setup/setup.R")
-
+library(tictoc)
 ## Data arguments
-data_type <- "abn"
-# rt <- 2
-corr <- "exchangeable"
-rho <- 0.99
-rho.noise <- 0.99
-a <- 5
-b <- 2
+data_type <- "laplace"
+rt <- 2
+corr <- "autoregressive"
+rho <- 0.8
+rho.noise <- 0
+# a <- 5
+# b <- 2
 # sd <- 1
 p <- 100
-ns <- p * c(0.5, 1, 4)
-# ns <- p * 30
+# ns <- p * c(0.5, 1, 4)
+ns <- p * 30
 nboot <- 1000
 simulations <- 100
 alpha <- .2
@@ -19,9 +19,8 @@ SNR <- 1
 modifier <- NA
 
 methods <- c("zerosample2")
-# nboot <- ifelse(all(methods == "fullconditional"), 1, nboot)
-# ci_method <- ifelse(all(methods == "fullconditional"), "identity", ci_method)
 n_methods <- length(methods)
+ci_method <- "quantile"
 
 args_list <- list(data = data_type,
                   n = ns,
@@ -36,11 +35,11 @@ args_list <- list(data = data_type,
                   method = methods,
                   ci_method = ci_method,
                   nominal_coverage = alpha * 100,
+                  lambda = "cv",
                   # modifier = modifier,
                   p = p)
 
-rds_folder <- "/Users/loganharris/github/lasso-boot/rds"
-check_parameters_existence(rds_folder, args_list, check_for = "existing", halt = TRUE)
+# check_parameters_existence(rds_folder, args_list, check_for = "existing", halt = TRUE)
 
 per_var <- per_dataset <- list()
 for (i in 1:length(ns)) {
@@ -66,7 +65,7 @@ for (i in 1:length(ns)) {
     } else if (data_type == "normal") {
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p, sd = sd), corr = corr, rho = rho, SNR = SNR)
     }
-    dat$X <- ncvreg::std(dat$X)
+    # dat$X <- ncvreg::std(dat$X)
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
 
     ## Only needed for running true lambda / sigma
@@ -78,23 +77,24 @@ for (i in 1:length(ns)) {
     ## Estimate lambda / sigma2
     if (any(!(methods %in% c("selectiveinference", "blp")))) {
       cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", lambda.min = ifelse(is.na(modifier), ifelse(n > p, 0.001, 0.05), lambda_min), max.iter = 1e8)
-    }
 
-    ## True lambda / CVE estimate sigma2
-    if (!is.na(modifier)) {
-      lambda <- true_lambda
-      if (modifier == "tl") {
-        ind <- stats::approx(cv_fit$lambda, seq(cv_fit$lambda), lambda)$y
-        l <- floor(ind)
-        r <- ceiling(ind)
-        w <- ind %% 1
-        sigma2 <- (1-w)*cv_fit$cve[l] + w*cv_fit$cve[r]
-      } else if (modifier == "tls") {
-        sigma2 <- drop(crossprod(dat$beta)) / SNR
+      ## True lambda / CVE estimate sigma2
+      if (!is.na(modifier)) {
+        lambda <- true_lambda
+        if (modifier == "tl") {
+          ind <- stats::approx(cv_fit$lambda, seq(cv_fit$lambda), lambda)$y
+          l <- floor(ind)
+          r <- ceiling(ind)
+          w <- ind %% 1
+          sigma2 <- (1-w)*cv_fit$cve[l] + w*cv_fit$cve[r]
+        } else if (modifier == "tls") {
+          sigma2 <- drop(crossprod(dat$beta)) / SNR
+        }
+      } else {
+        lambda <- cv_fit$lambda.min
+        sigma2 <- cv_fit$cve[cv_fit$min]
       }
-    } else {
-      lambda <- cv_fit$lambda.min
-      sigma2 <- cv_fit$cve[cv_fit$min]
+
     }
 
     coverage_df <- data.frame(dat$beta, j)
@@ -108,7 +108,8 @@ for (i in 1:length(ns)) {
       start <- Sys.time()
       if (methods[k] == "selectiveinference") {
         ### Selective Inference
-        res <- selective_inference(dat, estimate_sigma = TRUE)
+        dat$X <- ncvreg::std(dat$X)
+        res <- selective_inference(dat, estimate_sigma = FALSE)
         if (!is.null(res)) {
           lam <- res$lambda
           ci <- dplyr::full_join(res$confidence_interval, data.frame(variable = names(dat$beta))) %>%
@@ -165,6 +166,11 @@ per_dataset_all <- do.call(rbind, per_dataset)
 colnames(per_dataset_all) <- c("time", "lambda", "method", "group", "n")
 
 
+per_var_all %>%
+  mutate(covered = truth >= lower & truth <= upper) %>%
+  group_by(n) %>%
+  summarise(coverage = mean(covered))
+
 for (i in 1:length(methods)) {
   for (j in 1:length(ns)) {
     per_var_n <- per_var_all %>%
@@ -184,9 +190,10 @@ for (i in 1:length(methods)) {
          method = methods[i],
          ci_method = ci_method,
          nominal_coverage = alpha * 100,
+         lambda = "cv",
          # modifier = modifier,
          p = p)
-    save_objects(folder = rds_folder, args_list = args_list, overwrite = FALSE, per_var_n, per_dataset_n)
+    save_objects(folder = rds_folder, args_list = args_list, overwrite = TRUE, per_var_n, per_dataset_n)
   }
 }
 

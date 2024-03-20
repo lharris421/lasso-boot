@@ -3,7 +3,6 @@ source("./scripts/setup/setup.R")
 n <- 100
 p <- 100
 ci_method <- "quantile"
-all_res <- list()
 methods <- "zerosample2"
 SNR <- 1
 corr <- "exchangeable"
@@ -61,7 +60,8 @@ accross_lambda_res <- function(dat, ci_method, method) {
 for (i in 1:length(methods)) {
 
   method <- methods[i]
-  avg_lambdas <- numeric(length(methods))
+  all_lambdas <- list()
+  all_res <- list()
 
   ## Sparse 1
   set.seed(my_seed)
@@ -76,7 +76,7 @@ for (i in 1:length(methods)) {
     lambdas[j] <- res$lambda_min
   }
   all_res[[1]] <- do.call(rbind, tmp)
-  avg_lambdas[1] <- mean(lambdas)
+  all_lambdas[[1]] <- lambdas
 
 
   ## Sparse 2
@@ -92,7 +92,7 @@ for (i in 1:length(methods)) {
     lambdas[j] <- res$lambda_min
   }
   all_res[[2]] <- do.call(rbind, tmp)
-  avg_lambdas[2] <- mean(lambdas)
+  all_lambdas[[2]] <- lambdas
 
   ## Sparse 3
   set.seed(my_seed)
@@ -107,7 +107,7 @@ for (i in 1:length(methods)) {
     lambdas[j] <- res$lambda_min
   }
   all_res[[3]] <- do.call(rbind, tmp)
-  avg_lambdas[3] <- mean(lambdas)
+  all_lambdas[[3]] <- lambdas
 
   ## Normal
   set.seed(my_seed)
@@ -121,7 +121,7 @@ for (i in 1:length(methods)) {
     lambdas[j] <- res$lambda_min
   }
   all_res[[4]] <- do.call(rbind, tmp)
-  avg_lambdas[4] <- mean(lambdas)
+  all_lambdas[[4]] <- lambdas
 
   ## Laplace
   rt <- 2
@@ -136,7 +136,7 @@ for (i in 1:length(methods)) {
     lambdas[j] <- res$lambda_min
   }
   all_res[[5]] <- do.call(rbind, tmp)
-  avg_lambdas[5] <- mean(lambdas)
+  all_lambdas[[5]] <- lambdas
 
   ## T
   set.seed(my_seed)
@@ -150,7 +150,7 @@ for (i in 1:length(methods)) {
     lambdas[j] <- res$lambda_min
   }
   all_res[[6]] <- do.call(rbind, tmp)
-  avg_lambdas[6] <- mean(lambdas)
+  all_lambdas[[6]] <- lambdas
 
   args_list <- list(data = data_type,
                     n = p,
@@ -168,5 +168,5 @@ for (i in 1:length(methods)) {
                     lambda = "across",
                     # modifier = modifier,
                     p = p)
-  save_objects(folder = rds_folder, args_list = args_list, overwrite = TRUE, all_res, avg_lambdas)
+  save_objects(folder = rds_folder, args_list = args_list, overwrite = TRUE, all_res, all_lambdas)
 }

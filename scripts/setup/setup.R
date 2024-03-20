@@ -16,6 +16,10 @@ library(stringr)
 library(tidyr)
 library(monomvn)
 
+library(mvtnorm)
+
+rds_folder <- "/Users/loganharris/github/lasso-boot/rds"
+
 devtools::load_all()
 
 my_seed <- 189807771

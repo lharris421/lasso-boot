@@ -16,9 +16,12 @@ selective_inference <- function(dat, alpha = .2, estimate_sigma = FALSE, sigma =
     colnames(B) <- c("lower", "upper")
     # B <- B[is.finite(B[,2]) & is.finite(B[,3]),-4]
     estimates <- data.frame(variable = colnames(dat$X), estimate = b)
+    scale_df <- data.frame(variable = colnames(dat$X), scale = attr(dat$X, "scale"))
     si_ci <- B %>%
       data.frame(method = "selective_inference", variable = rownames(B)) %>%
-      left_join(estimates)
+      left_join(estimates) %>%
+      left_join(scale_df) %>%
+      mutate(estimate = estimate / scale, lower = lower / scale, upper = upper / scale)
     res <- list("confidence_interval" = si_ci, "lambda" = lam, "sigma" = sigma)
     return(res)
   }, error = function(e) {
