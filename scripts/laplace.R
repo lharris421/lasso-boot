@@ -3,15 +3,14 @@ library(tictoc)
 ## Data arguments
 data_type <- "laplace"
 rt <- 2
-corr <- "autoregressive"
-rho <- 0.8
-rho.noise <- 0
+corr <- "exchangeable"
+rho <- 0
+# rho.noise <- 0
 # a <- 5
 # b <- 2
 # sd <- 1
 p <- 100
-# ns <- p * c(0.5, 1, 4)
-ns <- p * 30
+ns <- p * c(0.5, 1, 4)
 nboot <- 1000
 simulations <- 100
 alpha <- .2
@@ -35,7 +34,7 @@ args_list <- list(data = data_type,
                   method = methods,
                   ci_method = ci_method,
                   nominal_coverage = alpha * 100,
-                  lambda = "cv",
+                  lambda = "cv_1se",
                   # modifier = modifier,
                   p = p)
 
@@ -64,6 +63,10 @@ for (i in 1:length(ns)) {
       dat <- gen_data_abn(n = n, p = p, a = a, b = b, rho = rho, rho.noise = rho.noise, noise = corr, SNR = SNR)
     } else if (data_type == "normal") {
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p, sd = sd), corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "orthogonal") {
+      true_lambda <- (1 / n) * rt
+      laplace_beta <- rlaplace(p, rate = rt)
+      dat <- genOrthoSNR(n = n, p = p, beta = laplace_beta, SNR = SNR)
     }
     # dat$X <- ncvreg::std(dat$X)
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
@@ -92,6 +95,7 @@ for (i in 1:length(ns)) {
         }
       } else {
         lambda <- cv_fit$lambda.min
+        # lambda <- cv_fit$lambda[min(which(cv_fit$lambda <= (cv_fit$lambda.min + cv_fit$cvse[cv_fit$min])))]
         sigma2 <- cv_fit$cve[cv_fit$min]
       }
 
@@ -184,8 +188,8 @@ for (i in 1:length(methods)) {
          rate = ifelse(data_type == "laplace", rt, NA),
          a = ifelse(data_type == "abn", a, NA),
          b = ifelse(data_type == "abn", b, NA),
-         correlation_structure = corr,
-         correlation = rho * 100,
+         # correlation_structure = corr,
+         # correlation = rho * 100,
          correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
          method = methods[i],
          ci_method = ci_method,
