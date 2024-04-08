@@ -1,23 +1,23 @@
 source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
-data_type <- "orthogonal"
+data_type <- "uniform"
 rt <- 2
-corr <- NA
-rho <- NA
+corr <- "exchangeable"
+rho <- 0
 # rho.noise <- 0
 # a <- 5
 # b <- 2
 # sd <- 1
 p <- 100
-ns <- p * c(1)
+ns <- p * c(4)
 nboot <- 1000
 simulations <- 100
 alpha <- .2
 SNR <- 1
 modifier <- NA
 
-methods <- c("debiased")
+methods <- c("zerosample2")
 n_methods <- length(methods)
 ci_method <- "quantile"
 
@@ -67,6 +67,10 @@ for (i in 1:length(ns)) {
       true_lambda <- (1 / n) * rt
       laplace_beta <- rlaplace(p, rate = rt)
       dat <- hdrm::genOrtho(n = n, p = p, beta = laplace_beta)
+    } else if (data_type == "uniform") {
+      unif_beta <- 4 * (rbeta(p, .1, .1) - .5)
+      # unif_beta <- runif(p, -2, 2)
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = unif_beta, corr = corr, rho = rho, SNR = SNR)
     }
     # dat$X <- ncvreg::std(dat$X)
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
@@ -176,29 +180,29 @@ per_var_all %>%
   summarise(coverage = mean(covered))
 
 
-for (i in 1:length(methods)) {
-  for (j in 1:length(ns)) {
-    per_var_n <- per_var_all %>%
-      filter(method == methods[i] & n == ns[j])
-    per_dataset_n <- per_dataset_all %>%
-      filter(method == methods[i] & n == ns[j])
-    args_list <- list(data = data_type,
-         n = ns[j],
-         snr = SNR,
-         sd = ifelse(data_type == "normal", sd, NA),
-         rate = ifelse(data_type == "laplace", rt, NA),
-         a = ifelse(data_type == "abn", a, NA),
-         b = ifelse(data_type == "abn", b, NA),
-         correlation_structure = corr,
-         correlation = rho * 100,
-         correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
-         method = methods[i],
-         ci_method = ci_method,
-         nominal_coverage = alpha * 100,
-         lambda = "cv",
-         modifier = modifier,
-         p = p)
-    save_objects(folder = rds_path, args_list = args_list, overwrite = TRUE, per_var_n, per_dataset_n)
-  }
-}
+# for (i in 1:length(methods)) {
+#   for (j in 1:length(ns)) {
+#     per_var_n <- per_var_all %>%
+#       filter(method == methods[i] & n == ns[j])
+#     per_dataset_n <- per_dataset_all %>%
+#       filter(method == methods[i] & n == ns[j])
+#     args_list <- list(data = data_type,
+#          n = ns[j],
+#          snr = SNR,
+#          sd = ifelse(data_type == "normal", sd, NA),
+#          rate = ifelse(data_type == "laplace", rt, NA),
+#          a = ifelse(data_type == "abn", a, NA),
+#          b = ifelse(data_type == "abn", b, NA),
+#          correlation_structure = corr,
+#          correlation = rho * 100,
+#          correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
+#          method = methods[i],
+#          ci_method = ci_method,
+#          nominal_coverage = alpha * 100,
+#          lambda = "cv",
+#          modifier = modifier,
+#          p = p)
+#     save_objects(folder = rds_path, args_list = args_list, overwrite = TRUE, per_var_n, per_dataset_n)
+#   }
+# }
 
