@@ -1,20 +1,20 @@
 set.seed(my_seed)
 niter <- 100
 coverage <- numeric(niter)
-n <- 500
+n <- 1000
 p <- 100
 alpha <- .2
 data_type <- "normal"
 method <- "lm"
 ci_method <- "quantile"
 SNR <- 1
-corr <- "exchangeable"
-rho <- 0
+corr <- "autoregressive"
+rho <- 0.8
 sd <- 1
 res <- list()
 for (j in 1:niter) {
   print(j)
-  dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p, mean = 0, sd = sd))
+  dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p, mean = 0, sd = sd), corr = corr, rho = rho)
   df <- data.frame(dat$y, dat$X)
   colnames(df) <- c("y", names(dat$beta))
 
@@ -47,11 +47,11 @@ args_list <- list(data = data_type,
                   b = ifelse(data_type == "abn", a, NA),
                   correlation_structure = corr,
                   correlation = rho,
-                  correlation_noise = ifelse(data_type == "normal", rho.noise, NA),
+                  correlation_noise = ifelse(data_type == "abn", rho.noise, NA),
                   method = method,
                   ci_method = ci_method,
                   nominal_coverage = alpha * 100,
                   modifier = NA,
                   lambda = "cv",
                   p = p)
-save_objects(folder = folder, args_list = args_list, res)
+save_objects(folder = folder, args_list = args_list, res, save_method = "rda")
