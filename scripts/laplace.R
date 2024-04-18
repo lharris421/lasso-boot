@@ -1,16 +1,16 @@
 source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
-data_type <- "normal"
-# rt <- 2
-corr <- "autoregressive"
-rho <- 0.8
+data_type <- "laplace"
+rt <- 2
+corr <- "exchangeable"
+rho <- 0
 # rho.noise <- 0
 # a <- 5
 # b <- 2
-sd <- 1
+# sd <- 1
 p <- 100
-ns <- p * c(50)
+ns <- p * c(.5, 1, 4)
 nboot <- 1000
 simulations <- 100
 alpha <- .2
@@ -29,7 +29,7 @@ args_list <- list(data = data_type,
                   a = ifelse(data_type == "abn", a, NA),
                   b = ifelse(data_type == "abn", b, NA),
                   correlation_structure = corr,
-                  correlation = rho * 100,
+                  correlation = ifelse(!is.null(corr), rho * 100, NA),
                   correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
                   method = methods,
                   ci_method = ci_method,
@@ -202,7 +202,8 @@ for (i in 1:length(methods)) {
          lambda = "cv",
          modifier = modifier,
          p = p)
-    save_objects(folder = rds_path, per_var_n, per_dataset_n, args_list = args_list, overwrite = TRUE, save_method = "rda")
+    res_list <- list("per_var_n" = per_var_n, "per_dataset_n" = per_dataset_n)
+    save_objects(folder = rds_path, res_list, args_list = args_list, overwrite = TRUE, save_method = "rds")
   }
 }
 

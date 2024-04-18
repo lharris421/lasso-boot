@@ -31,5 +31,6 @@ laplace_beta <- rlaplace(p, rate = rt)
 dat <- gen_data_snr(n = n, p = p, p1 = p, beta = laplace_beta, SNR = SNR)
 truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
 res <- ncvreg::boot.ncvreg(dat$X, dat$y, nboot = 1000)
+res_list <- list("res" = res, "truth_df" = truth_df)
 
-save_objects(folder = rds_path, res, truth_df,  args_list = args_list, overwrite = FALSE, save_method = "rda")
+save_objects(folder = rds_path, res_list,  args_list = args_list, overwrite = TRUE, save_method = "rds")

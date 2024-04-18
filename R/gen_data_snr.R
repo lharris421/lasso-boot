@@ -22,9 +22,12 @@ gen_data_snr <- function(n, p, p1=floor(p/2), beta, family=c("gaussian","binomia
     } else {
       beta <- b*s*beta
     }
+  } else {
+    beta <- (beta / sqrt(drop(crossprod(beta)))) * sqrt(SNR)
   }
   # sigma <- ifelse(missing(beta) || length(beta)==1, 1, sqrt(var(X %*% beta)/SNR))
-  sigma <- ifelse(missing(beta) || length(beta)==1, 1, sqrt(drop(crossprod(beta))/SNR))
+  # sigma <- ifelse(missing(beta) || length(beta)==1, 1, sqrt(drop(crossprod(beta))/SNR))
+  sigma <- 1
   # Gen y
   y <- gen_y(X%*%beta, family=family, sigma=sigma)
 
