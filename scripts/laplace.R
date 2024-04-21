@@ -2,13 +2,8 @@ source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
 data_type <- "laplace"
-rt <- 2
-corr <- "exchangeable"
-rho <- 0
-# rho.noise <- 0
-# a <- 5
-# b <- 2
-# sd <- 1
+corr <- "autoregressive"
+rho <- 0.6
 p <- 100
 ns <- p * c(.5, 1, 4)
 nboot <- 1000
@@ -17,25 +12,19 @@ alpha <- .2
 SNR <- 1
 modifier <- NA
 
-methods <- c("zerosample2")
+methods <- c("debiased")
 n_methods <- length(methods)
 ci_method <- "quantile"
 
 args_list <- list(data = data_type,
                   n = ns,
                   snr = SNR,
-                  sd = ifelse(data_type == "normal", sd, NA),
-                  rate = ifelse(data_type == "laplace", rt, NA),
-                  a = ifelse(data_type == "abn", a, NA),
-                  b = ifelse(data_type == "abn", b, NA),
-                  correlation_structure = corr,
+                  correlation_structure = ifelse(rho > 0, corr, NA),
                   correlation = ifelse(!is.null(corr), rho * 100, NA),
-                  correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
                   method = methods,
                   ci_method = ci_method,
                   nominal_coverage = alpha * 100,
                   lambda = "cv",
-                  # modifier = modifier,
                   p = p)
 
 check_parameters_existence(rds_path, args_list, check_for = "existing", halt = FALSE)
@@ -56,21 +45,32 @@ for (i in 1:length(ns)) {
     set.seed(current_seed)
 
     if (data_type == "laplace") {
-      true_lambda <- (1 / n) * rt
-      laplace_beta <- rlaplace(p, rate = rt)
+      true_lambda <- (1 / n) * 14.14
+      laplace_beta <- rlaplace(p, rate = 1)
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = laplace_beta, corr = corr, rho = rho, SNR = SNR)
-    } else if (data_type == "abn") {
-      dat <- gen_data_abn(n = n, p = p, a = a, b = b, rho = rho, rho.noise = rho.noise, noise = corr, SNR = SNR)
     } else if (data_type == "normal") {
-      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p, sd = sd), corr = corr, rho = rho, SNR = SNR)
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p), corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "t") {
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rt(p, sd = sd), corr = corr, rho = rho, SNR = SNR)
     } else if (data_type == "orthogonal") {
-      true_lambda <- (1 / n) * rt
-      laplace_beta <- rlaplace(p, rate = rt)
+      true_lambda <- (1 / n) * 14.14
+      laplace_beta <- rlaplace(p, rate = 1)
       dat <- hdrm::genOrtho(n = n, p = p, beta = laplace_beta)
     } else if (data_type == "uniform") {
-      # unif_beta <- 6 * (rbeta(p, .1, .1) - .5)
-      unif_beta <- runif(p, -3, 3)
+      unif_beta <- runif(p, -1, 1)
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = unif_beta, corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "beta") {
+      unif_beta <- rbeta(p, .1, .1) - .5
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = beta_beta, corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "sparse1") {
+      betas <- rep(c(rep(0.5, 3), 1, 2), 2) * c(rep(1, 5), rep(-1, 5))
+      dat <- gen_data_snr(n = n, p = p, p1 = 10, beta = betas, corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "sparse2") {
+      betas <- rnorm(30)
+      dat <- gen_data_snr(n = n, p = p, p1 = 30, beta = betas, corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "sparse3") {
+      betas <- rnorm(50)
+      dat <- gen_data_snr(n = n, p = p, p1 = 50, beta = betas, corr = corr, rho = rho, SNR = SNR)
     }
     # dat$X <- ncvreg::std(dat$X)
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
@@ -186,24 +186,11 @@ for (i in 1:length(methods)) {
       filter(method == methods[i] & n == ns[j])
     per_dataset_n <- per_dataset_all %>%
       filter(method == methods[i] & n == ns[j])
-    args_list <- list(data = data_type,
-         n = ns[j],
-         snr = SNR,
-         sd = ifelse(data_type == "normal", sd, NA),
-         rate = ifelse(data_type == "laplace", rt, NA),
-         a = ifelse(data_type == "abn", a, NA),
-         b = ifelse(data_type == "abn", b, NA),
-         correlation_structure = corr,
-         correlation = rho * 100,
-         correlation_noise = ifelse(data_type == "abn", rho.noise * 100, NA),
-         method = methods[i],
-         ci_method = ci_method,
-         nominal_coverage = alpha * 100,
-         lambda = "cv",
-         modifier = modifier,
-         p = p)
+    tmp_args <- args_list
+    tmp_args$n <- ns[j]
     res_list <- list("per_var_n" = per_var_n, "per_dataset_n" = per_dataset_n)
-    save_objects(folder = rds_path, res_list, args_list = args_list, overwrite = TRUE, save_method = "rds")
+    ## Need to update to take grid or way to subset list easily
+    save_objects(folder = rds_path, res_list, args_list = tmp_args, overwrite = TRUE, save_method = "rds")
   }
 }
 
