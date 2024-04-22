@@ -69,4 +69,4 @@ for (j in 1:length(args_list$n)) {
 }
 
 res_list <- list("res" = res, "lambdas" = lambdas)
-save_objects(folder = rds_folder, res_list, args_list = args_list, overwrite = FALSE, save_method = "rds")
+save_objects(folder = rds_path, res_list, args_list = args_list, overwrite = FALSE, save_method = "rds")
