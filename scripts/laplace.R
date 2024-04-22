@@ -1,9 +1,9 @@
 source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
-data_type <- "laplace"
-corr <- "autoregressive"
-rho <- 0.6
+data_type <- "sparse 3"
+corr <- NULL
+rho <- 0
 p <- 100
 ns <- p * c(.5, 1, 4)
 nboot <- 1000
@@ -12,7 +12,7 @@ alpha <- .2
 SNR <- 1
 modifier <- NA
 
-methods <- c("debiased")
+methods <- c("zerosample2")
 n_methods <- length(methods)
 ci_method <- "quantile"
 
@@ -51,26 +51,26 @@ for (i in 1:length(ns)) {
     } else if (data_type == "normal") {
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p), corr = corr, rho = rho, SNR = SNR)
     } else if (data_type == "t") {
-      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rt(p, sd = sd), corr = corr, rho = rho, SNR = SNR)
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rt(p, df = 3), corr = corr, rho = rho, SNR = SNR)
     } else if (data_type == "orthogonal") {
-      true_lambda <- (1 / n) * 14.14
-      laplace_beta <- rlaplace(p, rate = 1)
-      dat <- hdrm::genOrtho(n = n, p = p, beta = laplace_beta)
+      # true_lambda <- (1 / n) * 14.14
+      # laplace_beta <- rlaplace(p, rate = 1)
+      dat <- hdrm::genOrtho(n = n, p = p)
     } else if (data_type == "uniform") {
       unif_beta <- runif(p, -1, 1)
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = unif_beta, corr = corr, rho = rho, SNR = SNR)
     } else if (data_type == "beta") {
-      unif_beta <- rbeta(p, .1, .1) - .5
+      beta_beta <- rbeta(p, .1, .1) - .5
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = beta_beta, corr = corr, rho = rho, SNR = SNR)
-    } else if (data_type == "sparse1") {
-      betas <- rep(c(rep(0.5, 3), 1, 2), 2) * c(rep(1, 5), rep(-1, 5))
-      dat <- gen_data_snr(n = n, p = p, p1 = 10, beta = betas, corr = corr, rho = rho, SNR = SNR)
-    } else if (data_type == "sparse2") {
-      betas <- rnorm(30)
-      dat <- gen_data_snr(n = n, p = p, p1 = 30, beta = betas, corr = corr, rho = rho, SNR = SNR)
-    } else if (data_type == "sparse3") {
-      betas <- rnorm(50)
-      dat <- gen_data_snr(n = n, p = p, p1 = 50, beta = betas, corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "sparse 1") {
+      betas <- c(rep(c(rep(0.5, 3), 1, 2), 2) * c(rep(1, 5), rep(-1, 5)), rep(0, 90))
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = betas, corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "sparse 2") {
+      betas <- c(rnorm(30), rep(0, 70))
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = betas, corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "sparse 3") {
+      betas <- c(rnorm(50), rep(0, 50))
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = betas, corr = corr, rho = rho, SNR = SNR)
     }
     # dat$X <- ncvreg::std(dat$X)
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)

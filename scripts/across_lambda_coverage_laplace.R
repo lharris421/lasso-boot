@@ -5,15 +5,11 @@ simulations <- 100
 
 alpha <- .2
 args_list <- list(data = "laplace",
-                    rate = 2,
                     snr = 1,
                     n = 100,
                     p = 100,
-                    correlation_structure = "exchangeable",
-                    correlation = 0,
-                    correlation_noise = NA,
-                    method = "debiased",
-                    ci_method = "mvn",
+                    method = "zerosample2",
+                    ci_method = "quantile",
                     lambda = "across",
                     nominal_coverage = alpha * 100)
 
@@ -31,8 +27,8 @@ for (j in 1:length(args_list$n)) {
 
     current_seed <- current_seed + k
     set.seed(current_seed)
-    laplace_beta <- rlaplace(args_list$p, rate = args_list$rate)
-    dat <- gen_data_snr(n = n, p = args_list$p, p1 = args_list$p, beta = laplace_beta, corr = args_list$correlation_structure, rho = args_list$correlation, SNR = args_list$snr)
+    laplace_beta <- rlaplace(args_list$p, rate = 2)
+    dat <- gen_data_snr(n = n, p = args_list$p, p1 = args_list$p, beta = laplace_beta, rho = 0, SNR = args_list$snr)
 
     lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
     lambda_min <- lambda_max * 0.001
@@ -72,4 +68,5 @@ for (j in 1:length(args_list$n)) {
 
 }
 
-save_objects(folder = rds_folder, args_list = args_list, overwrite = FALSE, res, lambdas)
+res_list <- list("res" = res, "lambdas" = lambdas)
+save_objects(folder = rds_folder, res_list, args_list = args_list, overwrite = FALSE, save_method = "rds")
