@@ -1,18 +1,18 @@
 source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
-data_type <- "sparse 3"
+data_type <- "laplace"
 corr <- NULL
 rho <- 0
 p <- 100
 ns <- p * c(.5, 1, 4)
 nboot <- 1000
 simulations <- 100
-alpha <- .2
+alpha <- .1
 SNR <- 1
 modifier <- NA
 
-methods <- c("zerosample2")
+methods <- c("selectiveinference", "blp")
 n_methods <- length(methods)
 ci_method <- "quantile"
 

@@ -1,18 +1,15 @@
 source("./scripts/setup/setup.R")
 
-methods <- c("debiased")
+methods <- c("zerosample2", "traditional")
 n_values <- 100
 data_type <- "sparse"
 SNR <- 1
-corr <- "exchangeable"
-rho <- 0
 alpha <- .2
 p <- 100
-modifier <- NA
-ci_method <- "mvn_corrected"
+ci_method <- "quantile"
 
 args_list <- list(data = data_type, n = n_values, snr = SNR, lambda = "cv",
-                                correlation_structure = corr, correlation = rho, method = methods,
+                                method = methods,
                                 ci_method = ci_method, nominal_coverage = alpha * 100, p = p)
 
 rds_folder <- "/Users/loganharris/github/lasso-boot/rds"
@@ -64,12 +61,14 @@ do.call(rbind, res[[i]]) %>%
   mean() %>%
   print()
 
+
 for (i in 1:length(methods)) {
     confidence_interval <- res[[methods[i]]]
     example <- example_res[[methods[i]]]
+    res_list <- list("confidence_interval" = confidence_interval, "example" = example)
     args_list <- list(data = data_type, n = n_values, snr = SNR, lambda = "cv",
-                      correlation_structure = corr, correlation = rho, method = methods,
+                      method = methods[i],
                       ci_method = ci_method, nominal_coverage = alpha * 100, p = p)
-    save_objects(folder = rds_folder, args_list = args_list, overwrite = TRUE, example, confidence_interval)
+    save_objects(folder = rds_folder, res_list, args_list = args_list, overwrite = TRUE)
 }
 
