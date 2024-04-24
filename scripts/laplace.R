@@ -8,7 +8,7 @@ p <- 100
 ns <- p * c(.5, 1, 4)
 nboot <- 1000
 simulations <- 100
-alpha <- .1
+alpha <- .2
 SNR <- 1
 modifier <- NA
 
@@ -169,7 +169,7 @@ for (i in 1:length(ns)) {
 }
 
 per_var_all <- do.call(rbind, per_var)
-colnames(per_var_all) <- c("truth", "variable", "lower", "upper", "center", "estimate", "method", "group", "n")
+colnames(per_var_all) <- c("truth", "variable", "lower", "upper", "estimate", "method", "group", "n")
 per_dataset_all <- do.call(rbind, per_dataset)
 colnames(per_dataset_all) <- c("time", "lambda", "method", "group", "n")
 
@@ -188,9 +188,12 @@ for (i in 1:length(methods)) {
       filter(method == methods[i] & n == ns[j])
     tmp_args <- args_list
     tmp_args$n <- ns[j]
+    tmp_args$method <- methods[i]
     res_list <- list("per_var_n" = per_var_n, "per_dataset_n" = per_dataset_n)
     ## Need to update to take grid or way to subset list easily
     save_objects(folder = rds_path, res_list, args_list = tmp_args, overwrite = TRUE, save_method = "rds")
+    print("New row")
+    print(tmp_args)
   }
 }
 

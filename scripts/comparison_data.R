@@ -36,7 +36,12 @@ for (i in 1:n_methods) {
     res <- selective_inference(dat, estimate_sigma = FALSE)
   } else if (methods[i] == "blp") {
     ### HDI - Across a range of lambda values
-    res <- blp(dat)
+    glmnet_fit <- cv.glmnet(dat$X, dat$y)
+    ests <- coef(glmnet_fit, s = glmnet_fit$lambda.1se)[-1]
+    print(ests)
+    res <- blp(dat, boot.shortcut = TRUE)
+    res$confidence_interval <- res$confidence_interval %>%
+      mutate(estimate = ests)
   } else {
     lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = TRUE, method = methods[i], nboot = nboot, lambda = lambda, sigma2 = sigma2)
     ci <- ci.boot.ncvreg(lassoboot, ci_method = ci_method) %>%
@@ -45,6 +50,6 @@ for (i in 1:n_methods) {
   }
   print(as.numeric(difftime(Sys.time(), start, units = "secs")))
 
-  save_objects(folder = rds_folder, args_list = args_list, overwrite = TRUE, res)
+  save_objects(folder = rds_path, args_list = args_list, overwrite = TRUE, res)
 }
 

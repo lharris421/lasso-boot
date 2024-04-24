@@ -3,7 +3,6 @@ library(tictoc)
 
 ## Data arguments
 data_type <- "laplace"
-rt <- 2
 p <- 100
 ns <- 100
 nboot <- 1000
@@ -17,7 +16,6 @@ ci_method <- "quantile"
 args_list <- list(data = data_type,
                   n = ns,
                   snr = SNR,
-                  rate = rt,
                   method = methods,
                   ci_method = ci_method,
                   nominal_coverage = alpha * 100,
@@ -26,11 +24,11 @@ args_list <- list(data = data_type,
 
 n <- ns
 current_seed <- floor((my_seed + n) * alpha)
-true_lambda <- (1 / n) * rt
-laplace_beta <- rlaplace(p, rate = rt)
+laplace_beta <- rlaplace(p, rate = 1)
 dat <- gen_data_snr(n = n, p = p, p1 = p, beta = laplace_beta, SNR = SNR)
 truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
 res <- ncvreg::boot.ncvreg(dat$X, dat$y, nboot = 1000)
 res_list <- list("res" = res, "truth_df" = truth_df)
 
-save_objects(folder = rds_path, res_list,  args_list = args_list, overwrite = TRUE, save_method = "rds")
+args_list$data <- "laplace-single"
+save_objects(folder = rds_path, res_list, args_list = args_list, overwrite = TRUE, save_method = "rds")
