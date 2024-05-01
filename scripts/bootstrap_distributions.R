@@ -9,7 +9,7 @@ nboot <- 1000
 alpha <- .2
 SNR <- 1
 
-methods <- c("zerosample2")
+methods <- c("sample")
 n_methods <- length(methods)
 ci_method <- "quantile"
 
@@ -23,11 +23,12 @@ args_list <- list(data = data_type,
                   p = p)
 
 n <- ns
-current_seed <- floor((my_seed + n) * alpha)
+current_seed <- floor((my_seed + n) * alpha) + 1
+set.seed(current_seed)
 laplace_beta <- rlaplace(p, rate = 1)
 dat <- gen_data_snr(n = n, p = p, p1 = p, beta = laplace_beta, SNR = SNR)
 truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
-res <- ncvreg::boot.ncvreg(dat$X, dat$y, nboot = 1000)
+res <- ncvreg::boot.ncvreg(dat$X, dat$y, nboot = 1000, method = args_list$method)
 res_list <- list("res" = res, "truth_df" = truth_df)
 
 args_list$data <- "laplace-single"

@@ -12,7 +12,7 @@ alpha <- .2
 SNR <- 1
 modifier <- NA
 
-methods <- c("selectiveinference", "blp")
+methods <- c("median")
 n_methods <- length(methods)
 ci_method <- "quantile"
 

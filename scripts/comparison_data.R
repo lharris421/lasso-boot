@@ -5,6 +5,7 @@ methods <- c("blp")
 n_methods <- length(methods)
 
 data_type <- "Scheetz2006"
+data_type <- "whoari"
 alpha <- .2
 lambda <- "cv"
 ci_method <- "quantile"
@@ -20,6 +21,7 @@ const <- apply(dat$X, 2, function(x) length(unique(x)) == 1)
 dat$X <- dat$X[,!dup & !const]
 
 if (any(!(methods %in% c("selectiveinference", "blp")))) {
+  set.seed(my_seed)
   cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso")
   lambda <- cv_fit$lambda.min
   sigma2 <- cv_fit$cve[cv_fit$min]
@@ -34,14 +36,14 @@ for (i in 1:n_methods) {
     ### Selective Inference
     dat$X <- ncvreg::std(dat$X)
     res <- selective_inference(dat, estimate_sigma = FALSE)
+    print(res$lambda)
   } else if (methods[i] == "blp") {
     ### HDI - Across a range of lambda values
-    glmnet_fit <- cv.glmnet(dat$X, dat$y)
-    ests <- coef(glmnet_fit, s = glmnet_fit$lambda.1se)[-1]
-    print(ests)
     res <- blp(dat, boot.shortcut = TRUE)
     res$confidence_interval <- res$confidence_interval %>%
       mutate(estimate = ests)
+    glmnet_fit <- cv.glmnet(dat$X, dat$y)
+    ests <- coef(glmnet_fit, s = res$lambda)[-1]
   } else {
     lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = TRUE, method = methods[i], nboot = nboot, lambda = lambda, sigma2 = sigma2)
     ci <- ci.boot.ncvreg(lassoboot, ci_method = ci_method) %>%
