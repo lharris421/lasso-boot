@@ -35,6 +35,7 @@ gen_data_snr <- function(n, p, p1=floor(p/2), beta, family=c("gaussian","binomia
   w <- 1 + floor(log10(p))
   vlab <- paste0('V', formatC(1:p, format='d', width=w, flag='0'))
   colnames(X) <- names(beta) <- vlab
+
   list(X=X, y=y, beta=beta, family=family)
 }
 

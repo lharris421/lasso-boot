@@ -1,9 +1,10 @@
-blp <- function(dat, return.bootdist = TRUE, B = 1000, boot.shortcut = FALSE, alpha = 0.2) {
+blp <- function(dat, return.bootdist = TRUE, B = 1000, boot.shortcut = FALSE, alpha = 0, lambda = NULL) {
 
   tryCatch({
     fit.lasso.allinfo <- boot.lasso.proj(
       dat$X, dat$y,
       return.bootdist = return.bootdist,
+      lambda = lambda,
       B = B,
       boot.shortcut = boot.shortcut
     )

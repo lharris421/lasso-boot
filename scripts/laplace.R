@@ -1,18 +1,18 @@
 source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
-data_type <- "laplace"
+data_type <- "sparse 3"
 corr <- NULL
 rho <- 0
 p <- 100
-ns <- p * c(.5, 1, 4)
+ns <- p * 10
 nboot <- 1000
 simulations <- 100
 alpha <- .2
 SNR <- 1
 modifier <- NA
 
-methods <- c("median")
+methods <- c("zerosample2")
 n_methods <- length(methods)
 ci_method <- "quantile"
 
@@ -27,8 +27,8 @@ args_list <- list(data = data_type,
                   lambda = "cv",
                   p = p)
 
-check_parameters_existence(rds_path, args_list, check_for = "existing", halt = FALSE)
-
+# check_parameters_existence(rds_path, args_list, check_for = "existing", halt = FALSE)
+errrs <- c()
 per_var <- per_dataset <- list()
 for (i in 1:length(ns)) {
 
@@ -45,16 +45,18 @@ for (i in 1:length(ns)) {
     set.seed(current_seed)
 
     if (data_type == "laplace") {
-      true_lambda <- (1 / n) * 14.14
+
       laplace_beta <- rlaplace(p, rate = 1)
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = laplace_beta, corr = corr, rho = rho, SNR = SNR)
+
+      true_rate <- laplace_beta[1] / dat$beta[1]
+      true_lambda <- true_rate / n
+
     } else if (data_type == "normal") {
-      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p), corr = corr, rho = rho, SNR = SNR)
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p, sd = 2), corr = corr, rho = rho, SNR = SNR)
     } else if (data_type == "t") {
-      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rt(p, df = 3), corr = corr, rho = rho, SNR = SNR)
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rt(p, df = 4), corr = corr, rho = rho, SNR = SNR)
     } else if (data_type == "orthogonal") {
-      # true_lambda <- (1 / n) * 14.14
-      # laplace_beta <- rlaplace(p, rate = 1)
       dat <- hdrm::genOrtho(n = n, p = p)
     } else if (data_type == "uniform") {
       unif_beta <- runif(p, -1, 1)
@@ -82,28 +84,27 @@ for (i in 1:length(ns)) {
     }
 
     ## Estimate lambda / sigma2
-    if (any(!(methods %in% c("selectiveinference", "blp")))) {
-      cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", lambda.min = ifelse(is.na(modifier), ifelse(n > p, 0.001, 0.05), lambda_min), max.iter = 1e8)
+    cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", lambda.min = ifelse(is.na(modifier), ifelse(n > p, 0.001, 0.05), lambda_min), max.iter = 1e8)
 
-      ## True lambda / CVE estimate sigma2
-      if (!is.na(modifier)) {
-        lambda <- true_lambda
-        if (modifier == "tl") {
-          ind <- stats::approx(cv_fit$lambda, seq(cv_fit$lambda), lambda)$y
-          l <- floor(ind)
-          r <- ceiling(ind)
-          w <- ind %% 1
-          sigma2 <- (1-w)*cv_fit$cve[l] + w*cv_fit$cve[r]
-        } else if (modifier == "tls") {
-          sigma2 <- drop(crossprod(dat$beta)) / SNR
-        }
-      } else {
-        lambda <- cv_fit$lambda.min
-        # lambda <- cv_fit$lambda[min(which(cv_fit$lambda <= (cv_fit$lambda.min + cv_fit$cvse[cv_fit$min])))]
-        sigma2 <- cv_fit$cve[cv_fit$min]
+    ## True lambda / CVE estimate sigma2
+    if (!is.na(modifier)) {
+      lambda <- true_lambda
+      if (modifier == "tl") {
+        ind <- stats::approx(cv_fit$lambda, seq(cv_fit$lambda), lambda)$y
+        l <- floor(ind)
+        r <- ceiling(ind)
+        w <- ind %% 1
+        sigma2 <- (1-w)*cv_fit$cve[l] + w*cv_fit$cve[r]
+      } else if (modifier == "tls") {
+        sigma2 <- 1
       }
-
+    } else {
+      lambda <- cv_fit$lambda.min
+      # lambda <- cv_fit$lambda[min(which(cv_fit$lambda <= (cv_fit$lambda.min + cv_fit$cvse[cv_fit$min])))]
+      sigma2 <- cv_fit$cve[cv_fit$min]
     }
+    print(lambda)
+
 
     coverage_df <- data.frame(dat$beta, j)
 
@@ -130,20 +131,23 @@ for (i in 1:length(ns)) {
         ### HDI
         res <- blp(dat)
         if (!is.null(res)) {
+          print("Res is not null")
           lam <- res$lambda
+          print(lam)
           ci <- res$confidence_interval
         } else {
+          print("Res is null")
           lam <- NA
           ci <- data.frame(variable = names(dat$beta), lower = NA, upper = NA, estimate = NA)
         }
       } else {
 
         if (is.na(modifier)) {
-          lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = TRUE, nboot = nboot, method = methods[k], max.iter = 1e8, lambda = lambda, sigma2 = sigma2) ## add alpha if running full conditional
+          lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = TRUE, nboot = nboot, max.iter = 1e8, lambda = lambda, sigma2 = sigma2)
         } else {
-          lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = nboot, method = methods[k], max.iter = 1e8, lambda = lambda, sigma2 = sigma2, lambda.min = lambda_min)
+          lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = FALSE, nboot = nboot, max.iter = 1e8, lambda = lambda, sigma2 = sigma2, lambda.min = lambda_min)
         }
-        ci <- ci.boot.ncvreg(lassoboot, ci_method = ci_method, alpha = alpha, original_data = dat)
+        ci <- ci.boot.ncvreg(lassoboot, alpha = alpha)
         lam <- lambda
 
       }
@@ -169,7 +173,7 @@ for (i in 1:length(ns)) {
 }
 
 per_var_all <- do.call(rbind, per_var)
-colnames(per_var_all) <- c("truth", "variable", "lower", "upper", "estimate", "method", "group", "n")
+colnames(per_var_all) <- c("truth", "variable", "lower", "upper", "center", "estimate", "method", "group", "n")
 per_dataset_all <- do.call(rbind, per_dataset)
 colnames(per_dataset_all) <- c("time", "lambda", "method", "group", "n")
 
@@ -188,7 +192,6 @@ for (i in 1:length(methods)) {
       filter(method == methods[i] & n == ns[j])
     tmp_args <- args_list
     tmp_args$n <- ns[j]
-    tmp_args$method <- methods[i]
     res_list <- list("per_var_n" = per_var_n, "per_dataset_n" = per_dataset_n)
     ## Need to update to take grid or way to subset list easily
     save_objects(folder = rds_path, res_list, args_list = tmp_args, overwrite = TRUE, save_method = "rds")

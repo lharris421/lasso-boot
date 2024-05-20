@@ -6,13 +6,14 @@ plot_ci_comparison <- function(cis, nvars = 20) {
       filter(method == current_method) %>%
       dplyr::arrange(desc(abs(estimate))) %>%
       slice_head(n = nvars) %>%
+      dplyr::arrange(desc(estimate)) %>%
       pull(variable)
   }
   plot_vars <- unique(unlist(plot_vars))
 
   plot_res <- cis %>%
     filter(variable %in% plot_vars) %>%
-    dplyr::arrange(desc(abs(estimate)))
+    dplyr::arrange(desc(estimate))
 
   plot_res$variable <- factor(plot_res$variable, levels = rev(plot_vars))
 

@@ -5,7 +5,7 @@ plot_ridge <- function(ridge_ci, n = 20, quiet = TRUE) {
 
   plot_res$variable <- rownames(plot_res)
   plot_res <- plot_res %>%
-    dplyr::arrange(desc(abs(estimate))) %>%
+    # dplyr::arrange(desc(abs(estimate))) %>%
     head(n)
 
   plot_res$variable <- factor(plot_res$variable, levels = rev(plot_res$variable))
