@@ -1,10 +1,10 @@
 source("./scripts/setup/setup.R")
 library(tictoc)
 # ci_method <- "bucketfill"
-methods <- c("selectiveinference")
+methods <- c("zerosample2")
 n_methods <- length(methods)
 
-data_type <- "Scheetz2006"
+data_type <- "brca1"
 # data_type <- "whoari"
 alpha <- .2
 lambda <- "cv"
@@ -15,7 +15,7 @@ params_grid <- expand.grid(args_list)
 
 # Koussounadis2014, Scheetz2006, whoari
 dat <- hdrm::readData("Scheetz2006")
-dat <- hdrm::readData("whoari")
+dat <- hdrm::readData("brca1")
 dup <- duplicated(t(dat$X))
 const <- apply(dat$X, 2, function(x) length(unique(x)) == 1)
 dat$X <- dat$X[,!dup & !const]
@@ -46,7 +46,7 @@ for (i in 1:n_methods) {
 
   } else {
     lassoboot <- boot.ncvreg(dat$X, dat$y, verbose = TRUE, method = methods[i], nboot = nboot, lambda = lambda, sigma2 = sigma2)
-    ci <- ci.boot.ncvreg(lassoboot, ci_method = ci_method) %>%
+    ci <- ci.boot.ncvreg(lassoboot) %>%
       mutate(method = methods[i])
     res <- list("confidence_interval" = ci, lambda, "sigma" = sqrt(sigma2))
   }

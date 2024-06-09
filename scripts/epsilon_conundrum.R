@@ -32,6 +32,7 @@ for (j in 1:100) {
   cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso")
   print(lambda <- cv_fit$lambda.min)
   print(sigma2 <- cv_fit$cve[cv_fit$min])
+  # sigma2 <- 1
 
   for (i in 1:length(methods)) {
     set.seed(current_seed)
@@ -42,7 +43,7 @@ for (j in 1:100) {
       example_res[[i]] <- tmp
     }
 
-    res[[i]][[j]] <- ci.boot.ncvreg(tmp, ci_method = ci_method, original_data = dat) %>%
+    res[[i]][[j]] <- ci.boot.ncvreg(tmp) %>%
       mutate(method = methods[i], truth = dat$beta, group = j)
 
     res[[i]][[j]] %>%

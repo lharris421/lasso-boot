@@ -33,6 +33,7 @@ for (j in 1:length(args_list$n)) {
     dat <- gen_data_snr(n = n, p = args_list$p, p1 = args_list$p, beta = laplace_beta, rho = 0, SNR = args_list$snr)
 
     true_rate <- laplace_beta[1] / dat$beta[1]
+    print(true_rate)
     true_lambda <- true_rate / n
 
     lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))

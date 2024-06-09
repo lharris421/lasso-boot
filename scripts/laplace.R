@@ -1,16 +1,16 @@
 source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
-data_type <- "sparse 3"
+data_type <- "laplace"
 corr <- NULL
 rho <- 0
 p <- 100
-ns <- p * 10
+ns <- p * c(0.5, 1, 4)
 nboot <- 1000
 simulations <- 100
-alpha <- .2
+alpha <- 0.2
 SNR <- 1
-modifier <- NA
+modifier <- "tl"
 
 methods <- c("zerosample2")
 n_methods <- length(methods)
@@ -25,7 +25,8 @@ args_list <- list(data = data_type,
                   ci_method = ci_method,
                   nominal_coverage = alpha * 100,
                   lambda = "cv",
-                  p = p)
+                  p = p,
+                  modifier = modifier)
 
 # check_parameters_existence(rds_path, args_list, check_for = "existing", halt = FALSE)
 errrs <- c()
@@ -49,8 +50,11 @@ for (i in 1:length(ns)) {
       laplace_beta <- rlaplace(p, rate = 1)
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = laplace_beta, corr = corr, rho = rho, SNR = SNR)
 
-      true_rate <- laplace_beta[1] / dat$beta[1]
+      print(laplace_beta[1] / dat$beta[1])
+      true_rate <- sqrt(2*p)
+      print(true_rate)
       true_lambda <- true_rate / n
+      print(true_lambda)
 
     } else if (data_type == "normal") {
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rnorm(p, sd = 2), corr = corr, rho = rho, SNR = SNR)
@@ -102,8 +106,9 @@ for (i in 1:length(ns)) {
       lambda <- cv_fit$lambda.min
       # lambda <- cv_fit$lambda[min(which(cv_fit$lambda <= (cv_fit$lambda.min + cv_fit$cvse[cv_fit$min])))]
       sigma2 <- cv_fit$cve[cv_fit$min]
+      # beta_tmp <- coef(cv_fit$fit, lambda = lambda)
+      # sigma2 <- ((n - sum(beta_tmp[-1] != 0))^(-1)) * drop(crossprod(dat$y - (beta_tmp[1] + (dat$X %*% beta_tmp[-1]))))
     }
-    print(lambda)
 
 
     coverage_df <- data.frame(dat$beta, j)
