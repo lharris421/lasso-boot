@@ -8,10 +8,10 @@ args_list <- list(data = "laplace",
                     snr = 1,
                     n = 100,
                     p = 100,
-                    method = "zerosample2",
-                    ci_method = "quantile",
+                    method = "lasso",
                     lambda = "across",
-                    nominal_coverage = alpha * 100)
+                    nominal_coverage = alpha * 100,
+                    alpha = 1)
 
 res <- list()
 lambdas <- list()
@@ -36,24 +36,25 @@ for (j in 1:length(args_list$n)) {
     print(true_rate)
     true_lambda <- true_rate / n
 
-    lambda_max <- max(ncvreg:::find_thresh(std(dat$X), dat$y))
-    lambda_min <- lambda_max * 0.001
-    lambda_seq <- 10^(seq(log(lambda_max, 10), log(lambda_min, 10), length.out = 10))
-
     cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", lambda.min = 0.001)
+    which_lambdas <- ceiling(((1:100)[1:100 %% 10 == 0 | 1:100 == 1] / 100) * length(cv_fit$lambda))
+    lambda_seq <- cv_fit$lambda[which_lambdas]
+    lambda_max <- max(cv_fit$lambda)
     lambda_mins[k] <- cv_fit$lambda.min / lambda_max
     lambda_truths[k] <- true_lambda / lambda_max
     print(k)
     print(lambda_mins[k])
 
-    lambda_seq <- c(lambda_seq, cv_fit$lambda.min)
+    # if (!(cv_fit$lambda.min %in% lambda_seq)) {
+    #   lambda_seq <- c(lambda_seq, cv_fit$lambda.min)
+    # }
 
     pre_lambda_res <- list()
     for (i in 1:length(lambda_seq)) {
       set.seed(current_seed)
-      boot_res <- boot.ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i], nboot = nboot, method = args_list$method, lambda.min = 0.001, max.iter = 1e8)
-      pre_lambda_res[[i]] <- ci.boot.ncvreg(boot_res, ci_method = args_list$ci_method) %>%
-        dplyr::mutate(lambda_ind = i, n = n, group = k)
+      boot_res <- boot_ncvreg(X = dat$X, y = dat$y, lambda = lambda_seq[i], nboot = nboot, method = args_list$method, lambda.min = 0.001, max.iter = 1e8)
+      pre_lambda_res[[i]] <- ci.boot_ncvreg(boot_res, alpha = alpha) %>%
+        dplyr::mutate(lambda_ind = i, n = n, group = k, lambda = lambda_seq[i], lambda_max = lambda_max)
     }
 
     truth <- data.frame(variable = names(dat$beta), truth = as.numeric(dat$beta))
@@ -62,7 +63,7 @@ for (j in 1:length(args_list$n)) {
 
     plot_data %>%
       mutate(covered = truth >= lower & truth <= upper) %>%
-      group_by(lambda_ind) %>%
+      group_by(lambda_ind, method) %>%
       summarise(coverage = mean(covered)) %>%
       print()
 

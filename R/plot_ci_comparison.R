@@ -31,6 +31,6 @@ plot_ci_comparison <- function(cis, nvars = 20) {
           legend.box.just = "right",
           legend.margin = margin(6, 6, 6, 6),
           legend.background = element_rect(fill = "transparent")) +
-    facet_wrap(~method, scales = "free_x")
+    facet_wrap(~method, scales = "free_x", nrow = 1)
 
 }

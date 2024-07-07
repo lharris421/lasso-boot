@@ -1,4 +1,4 @@
-blp <- function(dat, return.bootdist = TRUE, B = 1000, boot.shortcut = FALSE, alpha = 0, lambda = NULL) {
+blp <- function(dat, return.bootdist = TRUE, B = 1000, boot.shortcut = FALSE, alpha = 0.2, lambda = NULL) {
 
   tryCatch({
     fit.lasso.allinfo <- boot.lasso.proj(
@@ -6,7 +6,8 @@ blp <- function(dat, return.bootdist = TRUE, B = 1000, boot.shortcut = FALSE, al
       return.bootdist = return.bootdist,
       lambda = lambda,
       B = B,
-      boot.shortcut = boot.shortcut
+      boot.shortcut = boot.shortcut,
+      verbose = TRUE
     )
     ci_hdi <- confint(fit.lasso.allinfo, level = 1 - alpha)
 
