@@ -9,7 +9,7 @@ p <- 100
 ns <- p * 1
 nboot <- 1000
 simulations <- 100
-alpha <- 0.1
+alpha <- 0.2
 SNR <- 1
 modifier <- NA
 enet_alpha <- 1
