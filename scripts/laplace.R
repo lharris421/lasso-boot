@@ -2,8 +2,8 @@ source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
 data_type <- "laplace"
-corr <- "autoregressive"
-rho <- 0.8
+corr <- NULL
+rho <- 0
 p <- 100
 # ns <- p * c(0.5, 1, 4)
 ns <- p * 1
@@ -156,7 +156,7 @@ for (i in 1:length(ns)) {
           max.iter = 1e8, lambda = lambda, sigma2 = sigma2, lambda.min = lambda_min,
           alpha = enet_alpha, gamma = gamma)
       }
-      ci <- ci.boot_ncvreg(lassoboot, alpha = alpha, debias = TRUE)
+      ci <- ci.boot_ncvreg(lassoboot, alpha = alpha, debias = FALSE)
       lam <- lambda
 
     }
@@ -218,7 +218,7 @@ for (j in 1:length(ns)) {
 
   tmp_args <- args_list
   tmp_args$n <- ns[j]
-  tmp_args$modifier <- "debias_z"
+  tmp_args$modifier <- "debias_lm"
 
   res_list <- list("per_var_n" = per_var_n, "per_dataset_n" = per_dataset_n)
   save_objects(folder = rds_path, res_list, args_list = tmp_args, overwrite = TRUE, save_method = "rds")

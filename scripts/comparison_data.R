@@ -42,7 +42,7 @@ for (i in 1:n_methods) {
   } else if (methods[i] == "blp") {
     ### HDI - Across a range of lambda values
     # res <- blp(dat, boot.shortcut = TRUE, lambda = lambda)
-    res <- blp(dat, boot.shortcut = FALSE)
+    res <- blp(dat, boot.shortcut = TRUE)
     glmnet_fit <- glmnet(dat$X, dat$y)
     ests <- coef(glmnet_fit, s = lambda)[-1] ## put back to res$lambda if want selected by blp
     res$confidence_interval <- res$confidence_interval %>%

@@ -47,8 +47,8 @@ beta_est <- beta_est[-1]
 partial_resid <- (dat$y - int) - (as.numeric(dat$X %*% beta_est) - (dat$X * matrix(beta_est, nrow=nrow(dat$X), ncol=ncol(dat$X), byrow=TRUE)))
 
 # Data list for Stan
-# data_list <- list(n = nrow(dat$X), p = 1, X = dat$X[,1,drop=FALSE], y = partial_resid[,1], lambda = cv_fit$lambda.min / 100, gamma = 3 / 100)
-data_list <- list(n = nrow(dat$X), p = ncol(dat$X), X = dat$X, y = dat$y, lambda = cv_fit$lambda.min, gamma = 3)
+data_list <- list(n = nrow(dat$X), p = 1, X = dat$X[,1,drop=FALSE], y = partial_resid[,1], lambda = cv_fit$lambda.min / 100, gamma = 3 / 100) ## Marginal
+# data_list <- list(n = nrow(dat$X), p = ncol(dat$X), X = dat$X, y = dat$y, lambda = cv_fit$lambda.min, gamma = 3) ## Full
 
 # Compile and fit the model using Stan
 fit <- stan(model_code = stan_model_code, data = data_list, iter = 100000, chains = 4, warmup = 90000, thin = 1)

@@ -1,14 +1,14 @@
 source("./scripts/setup/setup.R")
 
-method <- "MCP"
+method <- "lasso"
 n_values <- 100
 data_type <- "sparse"
 SNR <- 1
 alpha <- .2
 p <- 100
-modifier <- NA
+modifier <- "debias"
 enet_alpha <- 1
-gamma <- 3.7
+gamma <- NA
 penalty <- method
 
 args_list <- list(
@@ -43,13 +43,13 @@ for (j in 1:100) {
   tmp <- boot_ncvreg(
     dat$X, dat$y, lambda = lambda, sigma2 = sigma2, verbose = TRUE,
     nboot = nboot, max.iter = 1e6,
-    penalty = method, alpha = enet_alpha, gamma = gamma)
+    penalty = method, alpha = enet_alpha, gamma = gamma, debias = TRUE)
 
   if (j == example_it) {
     example_res <- tmp
   }
 
-  res[[j]] <- ci.boot_ncvreg(tmp) %>%
+  res[[j]] <- ci.boot_ncvreg(tmp, debias = TRUE) %>%
     mutate(submethod = method, method = penalty, group = j) %>%
     inner_join(data.frame(truth = dat$beta, variable = names(dat$beta)))
 
