@@ -8,7 +8,7 @@ args_list <- list(data = "laplace",
                     snr = 1,
                     n = 100,
                     p = 100,
-                    method = "lasso",
+                    method = "MCP", gamma = 3,
                     lambda = "across",
                     nominal_coverage = alpha * 100,
                     alpha = 1)
@@ -31,12 +31,13 @@ for (j in 1:length(args_list$n)) {
     set.seed(current_seed)
     laplace_beta <- rlaplace(args_list$p, rate = 1)
     dat <- gen_data_snr(n = n, p = args_list$p, p1 = args_list$p, beta = laplace_beta, rho = 0, SNR = args_list$snr)
+    # dat <- gen_data_snr(n = n, p = args_list$p, p1 = args_list$p, beta = laplace_beta, rho = 0.8, corr = "autoregressive", SNR = args_list$snr)
 
     true_rate <- laplace_beta[1] / dat$beta[1]
     print(true_rate)
     true_lambda <- true_rate / n
 
-    cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = "lasso", lambda.min = 0.001)
+    cv_fit <- cv.ncvreg(dat$X, dat$y, penalty = args_list$method, lambda.min = 0.001)
     which_lambdas <- ceiling(((1:100)[1:100 %% 10 == 0 | 1:100 == 1] / 100) * length(cv_fit$lambda))
     lambda_seq <- cv_fit$lambda[which_lambdas]
     lambda_max <- max(cv_fit$lambda)
@@ -77,5 +78,6 @@ for (j in 1:length(args_list$n)) {
 
 }
 
+# args_list$modifier <- "correlation"
 res_list <- list("res" = res, "lambdas" = lambdas, "true_lambdas" = true_lambdas)
 save_objects(folder = rds_path, res_list, args_list = args_list, overwrite = TRUE, save_method = "rds")

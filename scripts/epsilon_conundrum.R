@@ -6,7 +6,7 @@ data_type <- "sparse"
 SNR <- 1
 alpha <- .2
 p <- 100
-modifier <- "debias"
+modifier <- "new_sigma2"
 enet_alpha <- 1
 gamma <- NA
 penalty <- method
@@ -18,7 +18,7 @@ args_list <- list(
 )
 
 rds_folder <- "/Users/loganharris/github/lasso-boot/rds"
-check_parameters_existence(rds_folder, args_list, check_for = "existing", halt = TRUE)
+# check_parameters_existence(rds_folder, args_list, check_for = "existing", halt = TRUE)
 
 example_it <- sample(1:100, 1)
 
@@ -43,13 +43,13 @@ for (j in 1:100) {
   tmp <- boot_ncvreg(
     dat$X, dat$y, lambda = lambda, sigma2 = sigma2, verbose = TRUE,
     nboot = nboot, max.iter = 1e6,
-    penalty = method, alpha = enet_alpha, gamma = gamma, debias = TRUE)
+    penalty = method, alpha = enet_alpha, gamma = gamma)
 
   if (j == example_it) {
     example_res <- tmp
   }
 
-  res[[j]] <- ci.boot_ncvreg(tmp, debias = TRUE) %>%
+  res[[j]] <- ci.boot_ncvreg(tmp) %>%
     mutate(submethod = method, method = penalty, group = j) %>%
     inner_join(data.frame(truth = dat$beta, variable = names(dat$beta)))
 
@@ -75,5 +75,5 @@ do.call(rbind, res) %>%
 confidence_interval <- res
 example <- example_res
 res_list <- list("confidence_interval" = confidence_interval, "example" = example)
-save_objects(folder = rds_folder, res_list, args_list = args_list, overwrite = TRUE)
+save_objects(folder = rds_folder, res_list, args_list = args_list, overwrite = TRUE, ignore_script_name = TRUE, get_script_name = FALSE)
 

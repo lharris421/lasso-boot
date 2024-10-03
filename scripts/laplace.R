@@ -1,17 +1,17 @@
 source("./scripts/setup/setup.R")
 library(tictoc)
 ## Data arguments
-data_type <- "laplace"
+data_type <- "beta"
 corr <- NULL
 rho <- 0
 p <- 100
-# ns <- p * c(0.5, 1, 4)
-ns <- p * 1
+ns <- p * c(0.5, 1, 4, 10)
+#ns <- p * 10
 nboot <- 1000
 simulations <- 100
 alpha <- 0.2
 SNR <- 1
-modifier <- NA
+modifier <- "new_sigma2"
 enet_alpha <- 1
 gamma <- NA
 
@@ -60,7 +60,7 @@ for (i in 1:length(ns)) {
     } else if (data_type == "t") {
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = rt(p, df = 4), corr = corr, rho = rho, SNR = SNR)
     } else if (data_type == "orthogonal") {
-      dat <- hdrm::genOrtho(n = n, p = p)
+      dat <- hdrm::gen_ortho(n = n, p = p)
     } else if (data_type == "uniform") {
       unif_beta <- runif(p, -1, 1)
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = unif_beta, corr = corr, rho = rho, SNR = SNR)
@@ -76,27 +76,31 @@ for (i in 1:length(ns)) {
     } else if (data_type == "sparse 3") {
       betas <- c(rnorm(50), rep(0, 50))
       dat <- gen_data_snr(n = n, p = p, p1 = p, beta = betas, corr = corr, rho = rho, SNR = SNR)
+    } else if (data_type == "sparse 4") {
+      betas <- c(3, rep(0, 99))
+      dat <- gen_data_snr(n = n, p = p, p1 = p, beta = betas, corr = corr, rho = rho, SNR = SNR)
     }
+
 
     truth_df <- data.frame(variable = names(dat$beta), truth = dat$beta)
 
 
     ## Estimate lambda / sigma2
-    if (method == "lasso") {
+    if (method %in% c("lasso", "MCP", "SCAD")) {
 
       ## Only needed for running true lambda / sigma
-      if (!is.na(modifier)) {
-        lambda_max <- max(ncvreg(dat$X, dat$y, penalty = "lasso")$lambda)
+      if (modifier %in% c("tl", "tls")) {
+        lambda_max <- max(ncvreg(dat$X, dat$y, penalty = method)$lambda)
         lambda_min <- (true_lambda / lambda_max) * .999
       }
 
       cv_fit <- cv.ncvreg(
-        dat$X, dat$y, penalty = method, lambda.min = ifelse(is.na(modifier), ifelse(n > p, 0.001, 0.05), lambda_min),
+        dat$X, dat$y, penalty = method, lambda.min = ifelse(!(modifier %in% c("tl", "tls")), ifelse(n > p, 0.001, 0.05), lambda_min),
         max.iter = 1e8, alpha = enet_alpha, gamma = gamma
       )
 
       ## True lambda / CVE estimate sigma2
-      if (!is.na(modifier)) {
+      if (modifier %in% c("tl", "tls")) {
         lambda <- true_lambda
         if (modifier == "tl") {
           ind <- stats::approx(cv_fit$lambda, seq(cv_fit$lambda), lambda)$y
@@ -145,18 +149,18 @@ for (i in 1:length(ns)) {
       }
     } else {
 
-      if (is.na(modifier)) {
+      if (!(modifier %in% c("tl", "tls"))) {
         lassoboot <- boot_ncvreg(
           dat$X, dat$y, penalty = method, verbose = TRUE, nboot = nboot,
-          max.iter = 1e8, lambda = lambda, sigma2 = sigma2, debias = TRUE,
+          max.iter = 1e8, lambda = lambda, sigma2 = sigma2,
           alpha = enet_alpha, gamma = gamma)
       } else {
         lassoboot <- boot_ncvreg(
-          dat$X, dat$y, penalty = method, verbose = FALSE, nboot = nboot, debias = TRUE,
+          dat$X, dat$y, penalty = method, verbose = FALSE, nboot = nboot,
           max.iter = 1e8, lambda = lambda, sigma2 = sigma2, lambda.min = lambda_min,
           alpha = enet_alpha, gamma = gamma)
       }
-      ci <- ci.boot_ncvreg(lassoboot, alpha = alpha, debias = FALSE)
+      ci <- ci.boot_ncvreg(lassoboot, alpha = alpha)
       lam <- lambda
 
     }
@@ -194,33 +198,29 @@ for (i in 1:length(ns)) {
 
 per_var_all <- do.call(rbind, per_var)
 colnames(per_var_all) <- c("truth", "variable", "estimate", "lower", "upper", "method", "group", "n")
-# colnames(per_var_all) <- c("truth", "variable", "lower", "upper", "estimate", "method", "group", "n")
 per_dataset_all <- do.call(rbind, per_dataset)
 colnames(per_dataset_all) <- c("time", "lambda", "method", "group", "n")
 
 per_var_all <- per_var_all %>%
   select(variable, truth, lower, upper, estimate, method, group, n)
 
-
 per_var_all %>%
   mutate(covered = truth >= lower & truth <= upper) %>%
-  group_by(n, method) %>%
+  group_by(n, method, truth) %>%
   summarise(coverage = mean(covered, na.rm = TRUE))
 
 for (j in 1:length(ns)) {
   per_var_n <- per_var_all %>%
     rename(submethod = method) %>%
-    mutate(method = "lasso") %>%
-    # mutate(submethod = method, method = penalty) %>%
+    mutate(method = penalty) %>%
     filter(n == ns[j])
   per_dataset_n <- per_dataset_all %>%
     filter(n == ns[j])
 
   tmp_args <- args_list
   tmp_args$n <- ns[j]
-  tmp_args$modifier <- "debias_lm"
 
   res_list <- list("per_var_n" = per_var_n, "per_dataset_n" = per_dataset_n)
-  save_objects(folder = rds_path, res_list, args_list = tmp_args, overwrite = TRUE, save_method = "rds")
+  save_objects(folder = rds_path, res_list, args_list = tmp_args, overwrite = TRUE, get_script_name = FALSE, ignore_script_name = TRUE)
 }
 
