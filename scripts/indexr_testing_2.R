@@ -1,0 +1,6 @@
+library(glue)
+devtools::load_all()
+indexr::create_hash_table("./rds_2/", save_path = "./rds_2/hash_table.csv", filter_list = list(script_name = "bias_decomposition"))
+indexr::update_hash_table("./rds_2/hash_table.csv", "./rds_2")
+indexr::create_hash_table("./rds_2/", save_path = "./rds_2/hash_table_new.csv")
+indexr::update_hash_table("./rds_2/hash_table_new.csv", "./rds_2")

@@ -4,25 +4,25 @@ source("./scripts/setup.R")
 params <- list(seed = 1234, iterations = 1000,
                simulation_function = "gen_data_distribution", simulation_arguments = list(
                  p = 100, SNR = 1
-                ), script_name = "distributions")
+               ), script_name = "distributions")
 
 
-# for (i in 1:length(methods)) {
-#   methods[[i]]$method_arguments["alpha"] <- 0.1
-# }
-methods <- methods[c("lasso_boot")]
+for (i in 1:length(methods)) {
+  methods[[i]]$method_arguments["alpha"] <- 0.2
+}
+methods <- methods[c("lasso", "lasso_relaxed")]
 
-ns <- c(400)
-rhos <- NULL
-correlations <- NULL
-distributions <- c("sparse 1")
+ns <- c(50, 100, 400)
+rhos <- c(0.4, 0.6, 0.8)
+correlations <- c("autoregressive")
+distributions <- c("laplace")
 true_lambda <- NULL
 true_sigma2 <- NULL
 
 simulations <- expand.grid(
   "n" = ns,
-  #"rho" = rhos,
-  #"corr" = correlations,
+  "rho" = rhos,
+  "corr" = correlations,
   "distribution" = distributions,
   #"true_lambda" = true_lambda,
   #"true_sigma2" = true_sigma2,
@@ -121,16 +121,12 @@ for(k in 1:nrow(simulations)) {
 
     ## Add method info to params
     method_info <- methods[[method_names[j]]]
-    params[names(method_info)] <- method_info
+    save_params <- params
+    save_params[names(method_info)] <- method_info
 
     ## Save results
-    indexr::save_objects("./rds", results, args_list = params, overwrite = TRUE)
+    indexr::save_objects("./rds", results, args_list = save_params, overwrite = TRUE)
 
   }
 
 }
-
-
-
-
-
