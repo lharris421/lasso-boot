@@ -1,28 +1,27 @@
 ## Setup
 source("./scripts/setup.R")
 
-params <- list(seed = 1234, iterations = 1000,
+params <- list(seed = 1234, iterations = 1,
                simulation_function = "gen_data_distribution", simulation_arguments = list(
-                 p = 100, SNR = 1
                ), script_name = "distributions")
 
 
 for (i in 1:length(methods)) {
   methods[[i]]$method_arguments["alpha"] <- 0.2
 }
-methods <- methods[c("lasso", "lasso_relaxed")]
+methods <- methods[c("lasso_proj_boot")]
 
-ns <- c(50, 100, 400)
-rhos <- c(0.4, 0.6, 0.8)
-correlations <- c("autoregressive")
-distributions <- c("laplace")
+ns <- NULL
+rhos <- NULL
+correlations <- NULL
+distributions <- c("Scheetz2006")
 true_lambda <- NULL
 true_sigma2 <- NULL
 
 simulations <- expand.grid(
-  "n" = ns,
-  "rho" = rhos,
-  "corr" = correlations,
+  # "n" = ns,
+  # "rho" = rhos,
+  # "corr" = correlations,
   "distribution" = distributions,
   #"true_lambda" = true_lambda,
   #"true_sigma2" = true_sigma2,
@@ -117,7 +116,7 @@ for(k in 1:nrow(simulations)) {
   for (j in 1:length(methods)) {
 
     ## Combine results for a give method
-    results <- bind_rows(dissertation:::extract_named_elements(res, method_names[j]))
+    results <- bind_rows(extract_named_elements(res, method_names[j]))
 
     ## Add method info to params
     method_info <- methods[[method_names[j]]]

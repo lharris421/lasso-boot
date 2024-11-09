@@ -29,8 +29,8 @@ calculate_model_results <- function(data) {
 #' @examples
 predict_covered <- function(data, x_values, method) {
   # fit <- gam(covered ~ s(mag_truth) + s(group, bs = "re"), data = data, family = binomial)
-  fit <- gam(covered ~ s(mag_truth), data = data, family = binomial)
-  y_values <- predict(fit, data.frame(mag_truth = x_values, group = 101), type = "response")
+  fit <- gam(covered ~ s(truth), data = data, family = binomial)
+  y_values <- predict(fit, data.frame(truth = x_values, group = 101), type = "response")
   data.frame(x = x_values, y = y_values, method = method)
 }
 
