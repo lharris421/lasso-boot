@@ -14,7 +14,7 @@ methods <- methods[c("lasso_boot", "lasso_proj_boot")]
 simulation_info <- list(
   simulation_function = "gen_data_distribution",
   simulation_arguments = list(
-    n = 100, p = 100, SNR = 1,
+    n = 400, p = 100, SNR = 1,
     distribution = "laplace"
   ),
   script_name ="distributions"
