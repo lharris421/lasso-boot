@@ -10,7 +10,7 @@ library(ncvreg)
 library(hdrm)
 
 iterations <- 100
-lambdas_pic <- lambdas_new <- lambdas_aic <- lambdas_1se <- lambdas_min <- lambdas_oracle <- lambdas_oracle2 <- numeric(iterations)
+lambdas_pic <- lambdas_new <- lambdas_aic <- lambdas_bic <- lambdas_min <- lambdas_oracle <- lambdas_oracle2 <- numeric(iterations)
 
 ## Data Scenarios
 data_types <- list(
@@ -20,7 +20,7 @@ data_types <- list(
   list(n = 50, p = 100, beta = c(rep(0.3, 40) * rep(c(-1, 1), each = 20), rep(0, 60))),
   list(n = 50, p = 100, beta = c(2, -2, rep(0, 98)), corr = "autoregressive", rho = 0.7)
 )
-data_type <- 4
+data_type <- 2
 
 pb <- progress_bar$new(
   format = "[:bar] :percent eta: :eta",
@@ -36,11 +36,11 @@ for (i in 1:iterations) {
   ##############
   ## Using CV ##
   ##############
-  cv_fit <- cv.ncvreg(data$X, data$y, penalty = "lasso", nfolds = 10)
+  cv_fit <- cv.ncvreg(data$X, data$y, penalty = "lasso", nfolds = 50)
   lambdas_min[i] <- cv_fit$lambda.min
-  lambdas_1se[i] <- cv_fit$lambda[min(which(cv_fit$cve <= cv_fit$cve[cv_fit$min] + cv_fit$cvse[cv_fit$min]))]
   lambdas_aic[i] <- cv_fit$lambda[which.min(AIC(cv_fit$fit))]
-  lambdas_pic[i] <- cv_fit$lambda[which.min(pic(data$X, data$y))]
+  lambdas_bic[i] <- cv_fit$lambda[which.min(BIC(cv_fit$fit))]
+  lambdas_pic[i] <- cv_fit$lambda[which.min(pic(data$X, data$y, relaxed = TRUE))]
 
 
   ###################
@@ -53,9 +53,9 @@ for (i in 1:iterations) {
 
 }
 
-mean(lambdas_min)
 mean(lambdas_oracle)
-mean(lambdas_1se)
+mean(lambdas_min)
 mean(lambdas_aic)
+mean(lambdas_bic)
 mean(lambdas_pic)
 

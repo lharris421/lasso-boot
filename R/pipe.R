@@ -18,7 +18,7 @@
 #' @examples
 pipe_ncvreg <- function(
     X, y, cv_fit, lambda, sigma = NULL, alpha = 0.05, penalty = "lasso",
-    correction, original_n = FALSE, inflate = FALSE,
+    original_n = FALSE, inflate = FALSE,
     relaxed = FALSE
 ) {
 
@@ -78,7 +78,6 @@ pipe_ncvreg <- function(
   bh_lambda <- coef(cv_fit$fit, lambda = lambda)
   rescale <- attr(X, "scale")
   bh_lambda <- bh_lambda[-1] * rescale
-  signs_s <- sign(bh_lambda)
   intercept <- mean(y - as.numeric(X %*% bh_lambda))
   yhat <- intercept + as.numeric(X %*% bh_lambda)
 
@@ -154,12 +153,7 @@ pipe_ncvreg <- function(
   ts <- b_bar / ses
   ps <- 2 * (1 - pnorm(abs(ts)))
   qs <- p.adjust(ps, method = "BH")
-  if (!missing(correction) && correction == "holm") alpha <- alpha / (ncol(X) - order(ps) + 1)
-  if (!studentize) {
-    widths <- abs(qnorm(alpha / 2)) * ses
-  } else {
-    widths <- abs(qt(alpha / 2, df = n - sh_lh)) * ses
-  }
+  widths <- abs(qnorm(alpha / 2)) * ses
 
   data.frame(
     variable = colnames(X),

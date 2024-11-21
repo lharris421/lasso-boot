@@ -7,7 +7,7 @@ library(progress) ## install.packages("progress")
 library(glue)
 library(ncvreg)
 
-## Ridge CV Functions 
+## Ridge CV Functions
 cv_ridge <- function(X, y, nfolds = 10) {
 
   ridge_fit <- hdrm::ridge(X, y)
@@ -55,62 +55,85 @@ cvf <- function(i, X, y, fold, cv.args) {
 }
 
 iterations <- 100
-ridge_exv_sses <- lasso_exv_sses <- ridge_cv_sses <- lasso_cv_sses <- oracle_sses <- numeric(iterations)
+lasso_loocv_sses <- ridge_loocv_sses <- ridge_gcv_sses <- ridge_exv_sses <- lasso_exv_sses <- ridge_cv_sses <- lasso_cv_sses <- oracle_sses <- numeric(iterations)
 
 ## Data Scenarios
 data_types <- list(
   list(p = 20, beta = c(2, -2, rep(0, 18))),
   list(p = 100, beta = c(1, -1, rep(0, 98))),
   list(p = 50, beta = c(rep(0.5, 8) * rep(c(-1, 1), each = 4), rep(0, 42))),
-  list(p = 100, beta = c(rep(0.3, 40) * rep(c(-1, 1), each = 20), rep(0, 60)))
+  list(p = 100, beta = c(rep(0.3, 40) * rep(c(-1, 1), each = 20), rep(0, 60))),
+  list(p = 100, beta = c(rep(0.25, 32) * rep(c(-1, 1), each = 16), rep(0, 68)))
 )
-data_type <- 1
+data_type <- 4
 
 pb <- progress_bar$new(
   format = "[:bar] :percent eta: :eta",
   total = iterations, clear = FALSE, width= 100
 )
 for (i in 1:iterations) {
-  
+
   ##########
   ## Data ##
   ##########
   data <- hdrm::gen_data(n = 50, p = data_types[[data_type]]$p, beta = data_types[[data_type]]$beta)
   data_exv <- hdrm::gen_data(n = 50, p = data_types[[data_type]]$p, beta = data_types[[data_type]]$beta)
-  
+
   ############
   ## Oracle ##
   ############
   oracle_beta <- coef(lm(data$y ~ -1 + data$X[,data$beta != 0]))
-  
+
   ##############
   ## Using CV ##
   ##############
-  lasso_cv <- cv.ncvreg(data$X, data$y, penalty = "lasso")
+  lasso_cv <- cv.ncvreg(data$X, data$y, penalty = "lasso", nfolds = 2)
   lasso_cv_beta <- coef(lasso_cv)[-1]
-  ridge_cv <- cv_ridge(data$X, data$y)
+  lasso_loocv <- cv.ncvreg(data$X, data$y, penalty = "lasso", nfolds = 50)
+  lasso_loocv_beta <- coef(lasso_loocv)[-1]
+  ridge_cv <- cv_ridge(data$X, data$y, nfolds = 2)
   ridge_cv_beta <- ridge_cv$fit$beta[-1,ridge_cv$min]
-  
+  ridge_loocv <- cv_ridge(data$X, data$y, nfolds = 50)
+  ridge_loocv_beta <- ridge_loocv$fit$beta[-1,ridge_loocv$min]
+  ridge_gcv <- hdrm::ridge(data$X, data$y)
+  ridge_gcv_beta <-ridge_gcv$beta[-1,which.min(ridge_gcv$GCV)]
+
   ###############
   ## Using EXV ##
   ###############
   lasso_exv_beta <- lasso_cv$fit$beta[-1,which.min(colMeans((data_exv$y - cbind(1, data_exv$X) %*% lasso_cv$fit$beta)^2))]
   ridge_exv_beta <- ridge_cv$fit$beta[-1,which.min(colMeans((data_exv$y - cbind(1, data_exv$X) %*% ridge_cv$fit$beta)^2))]
-  
-  
+
+
   ####################
   ## Calculate SSEs ##
   ####################
   oracle_sses[i] <- sum((data$beta[data$beta != 0] - oracle_beta)^2)
   lasso_cv_sses[i] <- sum((data$beta - lasso_cv_beta)^2)
+  lasso_loocv_sses[i] <- sum((data$beta - lasso_loocv_beta)^2)
   ridge_cv_sses[i] <- sum((data$beta - ridge_cv_beta)^2)
+  ridge_loocv_sses[i] <- sum((data$beta - ridge_loocv_beta)^2)
+  ridge_gcv_sses[i] <- sum((data$beta - ridge_gcv_beta)^2)
   lasso_exv_sses[i] <- sum((data$beta - lasso_exv_beta)^2)
   ridge_exv_sses[i] <- sum((data$beta - ridge_exv_beta)^2)
   pb$tick()
-  
+
 }
 
 print(glue("Relative CV MSE of lasso to ridge: {round(mean(lasso_cv_sses) / mean(ridge_cv_sses), 3)}"))
 print(glue("Relative Ex Validation MSE of lasso to ridge: {round(mean(lasso_exv_sses) / mean(ridge_exv_sses), 3)}"))
 print(glue("Relative MSE of lasso CV to EXV: {round(mean(lasso_cv_sses) / mean(lasso_exv_sses), 3)}"))
 print(glue("Relative MSE of ridge CV to EXV: {round(mean(ridge_cv_sses) / mean(ridge_exv_sses), 3)}"))
+
+## Compare gcv to loocv for ridge
+print(glue("Relative MSEE of Ridge using GCV and LOOCV: {round(mean(ridge_gcv_sses) / mean(ridge_loocv_sses), 3)}"))
+
+## Compare loocv to 10 fold cv
+print(glue("Relative MSEE of Ridge using 10 fold CV and LOOCV: {round(mean(ridge_cv_sses) / mean(ridge_loocv_sses), 3)}"))
+print(glue("Relative MSEE of Ridge using 10 fold CV and LOOCV: {round(mean(lasso_cv_sses) / mean(lasso_loocv_sses), 3)}"))
+
+## Compare
+print(glue("Relative CV MSE of lasso to ridge: {round(mean(lasso_cv_sses) / mean(ridge_gcv_sses), 3)}"))
+
+## mse dist vs k
+## Add gcv, direct comparison of loocv to gcv

@@ -1,30 +1,31 @@
 ## Setup
 source("./scripts/setup.R")
 
-params <- list(seed = 1234, iterations = 1,
+params <- list(seed = 1234, iterations = 1000,
                simulation_function = "gen_data_distribution", simulation_arguments = list(
+                 p = 100, SNR = 1
                ), script_name = "distributions")
 
 
 for (i in 1:length(methods)) {
   methods[[i]]$method_arguments["alpha"] <- 0.2
 }
-methods <- methods[c("lasso_proj_boot")]
+methods <- methods[c("mcp")]
 
-ns <- NULL
-rhos <- NULL
-correlations <- NULL
-distributions <- c("Scheetz2006")
-true_lambda <- NULL
-true_sigma2 <- NULL
+ns <- c(50, 100, 400)
+rhos <- c(0.4, 0.6, 0.8)
+correlations <- "autoregressive"
+distributions <- c("laplace")
+true_lambda <- TRUE
+true_sigma2 <- TRUE
 
 simulations <- expand.grid(
-  # "n" = ns,
-  # "rho" = rhos,
-  # "corr" = correlations,
+  "n" = ns,
+  "rho" = rhos,
+  "corr" = correlations,
   "distribution" = distributions,
-  #"true_lambda" = true_lambda,
-  #"true_sigma2" = true_sigma2,
+  "true_lambda" = true_lambda,
+  "true_sigma2" = true_sigma2,
   stringsAsFactors = FALSE
 )
 

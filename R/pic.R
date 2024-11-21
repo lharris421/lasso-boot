@@ -1,5 +1,5 @@
 pic <- function(
-    X, y, penalty = "lasso"
+    X, y, penalty = "lasso", relaxed = TRUE
 ) {
 
   X <- ncvreg::std(X)
@@ -67,6 +67,9 @@ pic <- function(
       ## May want to revisit
       samp_size <- t(X[,j,drop=FALSE]) %*% q_sh %*% X[,j,drop=FALSE]
       samp_sizes[j] <- samp_size
+      if (relaxed) {
+        b_bar[j] <- (t(X[,j,drop=FALSE]) %*% q_sh %*% y) / samp_size
+      }
       logLik <- logLik + (samp_size / sigma_h^2) * (bh_lambda[j]^2 - 2*b_bar[j]*bh_lambda[j])
 
 
@@ -78,6 +81,6 @@ pic <- function(
 
   }
 
-  return(logLiks + log(eff_ss)*colSums(cv_fit$fit$beta[-1,] != 0))
+  return(logLiks + 2*colSums(cv_fit$fit$beta[-1,] != 0))
 
 }
