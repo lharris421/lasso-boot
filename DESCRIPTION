@@ -1,5 +1,5 @@
-Package: lassoboot
-Title: Work for Logan Harris' dissertation
+Package: lasso-boot
+Title: Bootstrapping for the lasso and related confidence intervals
 Version: 0.0.1
 Date: 2023-05-27
 Authors@R: person("Logan", "Harris", role=c("aut","cre"), email="logan-harris@uiowa.edu")
