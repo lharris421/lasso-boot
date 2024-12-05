@@ -10,7 +10,7 @@ params <- list(seed = 1234, iterations = 1000,
 for (i in 1:length(methods)) {
   methods[[i]]$method_arguments["alpha"] <- 0.2
 }
-methods <- methods[c("mcp")]
+methods <- methods[c("lasso_relaxed")]
 
 ns <- c(50, 100, 400)
 rhos <- c(0.4, 0.6, 0.8)

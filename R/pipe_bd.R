@@ -16,7 +16,7 @@
 #' @export
 #'
 #' @examples
-pipe <- function(X, y, fit, lambda, sigma,
+pipe_bd <- function(X, y, fit, lambda, sigma,
                   family = c("gaussian", "binomial"),
                   penalty = c("MCP", "SCAD", "lasso"),
                   gamma = switch(penalty, SCAD = 3.7, 3),
