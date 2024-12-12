@@ -28,10 +28,10 @@ methods <- list(
   "traditional" = list(method = "boot_ncv", method_arguments = list(penalty = "lasso", submethod = "traditional")),
   "posterior" = list(method = "boot_ncv", method_arguments = list(penalty = "lasso", submethod = "posterior")),
   "debiased" = list(method = "boot_ncv", method_arguments = list(penalty = "lasso", submethod = "debiased")),
-  "debiased_fma" = list(method = "boot_ncv", method_arguments = list(penalty = "lasso", submethod = "debiased", reselect_lambda = TRUE)),
   "selective_inference" = list(method = "selective_inference", method_arguments = list()),
   "lasso_proj_boot" = list(method = "blp", method_arguments = list()),
   "lasso_proj_boot_shortcut" = list(method = "blp", method_arguments = list(boot.shortcut = TRUE)),
+  "lasso_proj" = list(method = "lp", method_arguments = list()),
   "ridge" = list(method = "ridge", method_arguments = list()),
   "lasso" = list(method = "posterior", method_arguments = list(penalty = "lasso")),
   "mcp"   = list(method = "posterior", method_arguments = list(penalty = "MCP")),
@@ -39,9 +39,11 @@ methods <- list(
   "mcp_relaxed"   = list(method = "posterior", method_arguments = list(penalty = "MCP", relaxed = TRUE)),
   "normal_approx"  = list(method = "pipe_ncvreg", method_arguments = list(original_n = TRUE)),
   "pipe"  = list(method = "pipe_ncvreg", method_arguments = list()),
-  "pipe_relaxed"  = list(method = "pipe_ncvreg", method_arguments = list(relaxed = TRUE)),
-  "pipe_mcp"  = list(method = "pipe_ncvreg", method_arguments = list(penalty = "MCP"))
+  "relaxed_lasso"  = list(method = "pipe_ncvreg", method_arguments = list(relaxed = TRUE)),
+  "pipe_mcp"  = list(method = "pipe_ncvreg", method_arguments = list(penalty = "MCP")),
+  "pipe_poisson" = list(method = "pipe", method_arguments = list(family = "poisson", level = 0.95)),
+  "pipe_binomial" = list(method = "pipe", method_arguments = list(family = "binomial", level = 0.95))
 )
-for (i in 1:length(methods)) {
-  methods[[i]]$method_arguments["alpha"] <- 0.2
-}
+# for (i in 1:length(methods)) {
+#   methods[[i]]$method_arguments["alpha"] <- 0.2
+# }

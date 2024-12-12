@@ -14,7 +14,7 @@
 #' @export
 #'
 #' @examples
-gen_data_snr <- function(n, p, p1=floor(p/2), beta, family=c("gaussian","binomial","hetero"), SNR=1,
+gen_data_snr <- function(n, p, p1=floor(p/2), beta, family=c("gaussian","binomial","poisson"), SNR=1, sigma = 1,
                          signal = c("homogeneous","heterogeneous"), corr=c("exchangeable", "autoregressive"),
                          rho = 0) {
 
@@ -22,9 +22,14 @@ gen_data_snr <- function(n, p, p1=floor(p/2), beta, family=c("gaussian","binomia
   signal <- match.arg(signal)
   corr <- match.arg(corr)
 
-  beta <- (beta / sqrt(drop(crossprod(beta)))) * sqrt(SNR)
+  if (!missing(beta)) beta <- (beta / sqrt(drop(crossprod(beta)))) * sqrt(SNR) * sigma
 
-  gen_data(n = n, p = p, p1 = p1, beta = beta, family = family, SNR = SNR,
-           signal = signal, corr = corr, rho = rho)
+  if (!missing(beta)) {
+    gen_data_sigma(n = n, p = p, p1 = p1, beta = beta, family = family, SNR = SNR, sigma = sigma,
+                   signal = signal, corr = corr, rho = rho)
+  } else {
+    gen_data_sigma(n = n, p = p, p1 = p1, family = family, SNR = SNR, sigma = sigma,
+                   signal = signal, corr = corr, rho = rho)
+  }
 
 }

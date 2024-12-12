@@ -229,7 +229,7 @@ bias_decomp_plots <- function(res, params) {
       title = "Original Debiased Est Bias Decomp",
       x = "Bias", y = "Density", color = "Bias Type", fill = "Bias Type"
     ) +
-    geom_vline(xintercept = median(res$lambdas), color = "red")
+    geom_vline(xintercept = mean(res$lambdas), color = "red")
 
   boot_bias <- ggplot(long_data_boot, aes(x = value, fill = variable, color = variable)) +
     geom_density(alpha = 0.2) +
@@ -238,7 +238,7 @@ bias_decomp_plots <- function(res, params) {
       title = "Bootstrap Bias Decomp",
       x = "Bias", y = "Density", color = "Bias Type", fill = "Bias Type"
     ) +
-    geom_vline(xintercept = median(res$lambdas), color = "red")
+    geom_vline(xintercept = mean(res$lambdas), color = "red")
 
   return(list(add_bias, orig_bias, boot_bias))
 

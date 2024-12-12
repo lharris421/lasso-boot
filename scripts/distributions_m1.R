@@ -3,22 +3,21 @@ source("./scripts/setup.R")
 
 params <- list(seed = 1234, iterations = 1000,
                simulation_function = "gen_data_distribution", simulation_arguments = list(
-                 n = 100, J = 50, K = 2, beta = c(0.8, 0.2, rep(0, 98)),
-                 J1 = 1, K1 = 2, rho.g = 0.5, rho.gz = 0 # K1 doesn't actually matter here (not used)
+                 p = 100, SNR = 1, sigma = 10
                ), script_name = "distributions")
 
 
 for (i in 1:length(methods)) {
-  methods[[i]]$method_arguments["alpha"] <- 0.05
+  methods[[i]]$method_arguments["alpha"] <- 0.2
 }
-methods <- methods[c("lasso_proj")]
+methods <- methods[c("lasso_proj_boot")]
 
-ns <- c(100)
-rhos <-  NULL
+ns <- c(50, 100, 400)
+rhos <- NULL
 correlations <- NULL
-distributions <- "group"
-true_sigma2 <- NULL
+distributions <- c("laplace")
 true_lambda <- NULL
+true_sigma2 <- NULL
 
 simulations <- expand.grid(
   "n" = ns,
@@ -56,8 +55,8 @@ for(k in 1:nrow(simulations)) {
     mcp_lambda <- NULL
     mcp_sigma2 <- NULL
     if (!is.null(params$same_lambda) && params$same_lambda) {
-      cv_fit <- cv.ncvreg(data$X, data$y, penalty = "lasso")
-      lasso_lambda <- cv_fit$lambda.min
+      glmnet_cv <- cv.glmnet(data$X, data$y)
+      lasso_lambda <- glmnet_cv$lambda.min
     } else if (!is.null(params$true_lambda) && params$true_lambda) {
       lasso_lambda <- sqrt(2*params$simulation_arguments$p) / params$simulation_arguments$n
     } else if (any(c("lasso", "lasso_relaxed", "lasso_boot") %in% names(methods))) {
