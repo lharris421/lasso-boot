@@ -3,28 +3,29 @@ source("./scripts/setup.R")
 
 params <- list(seed = 1234, iterations = 1000,
                simulation_function = "gen_data_distribution", simulation_arguments = list(
-                 n = 100, J = 50, K = 2, beta = c(0.8, 0.2, rep(0, 98)),
-                 J1 = 1, K1 = 2, rho.g = 0.5, rho.gz = 0 # K1 doesn't actually matter here (not used)
+                 p = 3000, beta = c(rep(c(0, 0, 0, 0, 1, 0, 0, 0, 0, 0), 30), rep(0, 2700))
                ), script_name = "distributions")
-
 
 for (i in 1:length(methods)) {
   methods[[i]]$method_arguments["alpha"] <- 0.05
 }
-methods <- methods[c("lasso_proj")]
+methods <- methods[c("pipe")]
 
-ns <- c(100)
-rhos <-  NULL
-correlations <- NULL
-distributions <- "group"
+## n and p
+## then rho??
+
+ns <- c(200)
+rhos <-  0.5
+correlations <- "autoregressive"
+distributions <- NULL
 true_sigma2 <- NULL
 true_lambda <- NULL
 
 simulations <- expand.grid(
   "n" = ns,
-  # "rho" = rhos,
-  # "corr" = correlations,
-  "distribution" = distributions,
+  "rho" = rhos,
+  "corr" = correlations,
+  # "distribution" = distributions,
   # "true_lambda" = true_lambda,
   # "true_sigma2" = true_sigma2,
   stringsAsFactors = FALSE

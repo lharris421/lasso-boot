@@ -16,8 +16,8 @@ gen_data_distribution <- function(n = 100, p = 100, p1=floor(p/2),
                                   corr = c("exchangeable", "autoregressive"),
                                   family = c("gaussian", "binomial", "poisson"),
                                   rho = 0, SNR = 1, sigma = 1, a = 1, b = 1,
-                                  J = NULL, K = NULL, J1 = NULL, K1 = NULL, rho.g = NULL,
-                                  rho.gz = NULL, ortho = FALSE) {
+                                  J = NULL, K = NULL, J1 = NULL, K1 = NULL, rho.g = 0,
+                                  rho.gz = 0, ortho = FALSE) {
 
   corr <- match.arg(corr)
   family <- match.arg(family)
@@ -79,6 +79,7 @@ gen_data_distribution <- function(n = 100, p = 100, p1=floor(p/2),
         corr = corr, rho = rho, SNR = SNR, sigma = sigma
       )
     } else {
+
       data <- gen_data_snr(
         n = n, p = p, p1 = p1, family = family,
         beta = betas, corr = corr, rho = rho, SNR = SNR, sigma = sigma

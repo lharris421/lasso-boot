@@ -5,7 +5,7 @@
 #' @param cv_fit
 #' @param lambda
 #' @param sigma2
-#' @param alpha
+#' @param level
 #' @param penalty
 #' @param submethod
 #' @param return_boot
@@ -19,13 +19,13 @@ boot_ncv <- function(X, y, cv_fit, lambda, sigma2,
                      alpha = 0.05,
                      penalty = "lasso", submethod = "hybrid",
                      reselect_lambda = FALSE,
-                     return_boot = FALSE
+                     return_boot = FALSE, sigma2_reed = FALSE
                      ) {
 
   res <- boot_ncvreg(
     X, y, cv_fit, penalty = penalty, lambda = lambda, sigma2 = sigma2,
     alpha = enet_alpha, gamma = gamma,
-    reselect_lambda = reselect_lambda
+    reselect_lambda = reselect_lambda, sigma2_reed = sigma2_reed
   )
   cis <- ci.boot_ncvreg(res, alpha = alpha, methods = submethod)
 

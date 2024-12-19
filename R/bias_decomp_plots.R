@@ -49,6 +49,8 @@ bias_decomp_plots <- function(res, params) {
   # Compute sum of bootstrap biases
   original_data$sum_bias <- rowSums(original_data[, boot_bias_vars], na.rm = TRUE)
 
+
+
   # Compute additional biases by subtracting bootstrap biases from original biases
   plotting_data <- original_data %>%
     mutate(
@@ -101,7 +103,7 @@ bias_decomp_plots <- function(res, params) {
 
   # Create labels for variables
   variable_labels_add <- c(
-    "add_bias" = "Additional Bias",
+    "add_bias" = "Bias",
     "add_n_bias" = "Attributable to N",
     "add_err_bias" = "Attr. to Err Corr (Irreducible)"
   )
@@ -218,7 +220,7 @@ bias_decomp_plots <- function(res, params) {
     geom_density(alpha = 0.2) +
     theme_bw() +
     labs(
-      title = "Additional Bootstrap Bias Compared to Original Debiased Est (Decomp)",
+      title = "Bootstrap Bias - Original Bias",
       x = "Bias", y = "Density", color = "Bias Type", fill = "Bias Type"
     )
 
@@ -226,7 +228,7 @@ bias_decomp_plots <- function(res, params) {
     geom_density(alpha = 0.2) +
     theme_bw() +
     labs(
-      title = "Original Debiased Est Bias Decomp",
+      title = "Original Bias",
       x = "Bias", y = "Density", color = "Bias Type", fill = "Bias Type"
     ) +
     geom_vline(xintercept = mean(res$lambdas), color = "red")
@@ -235,7 +237,7 @@ bias_decomp_plots <- function(res, params) {
     geom_density(alpha = 0.2) +
     theme_bw() +
     labs(
-      title = "Bootstrap Bias Decomp",
+      title = "Bootstrap Bias",
       x = "Bias", y = "Density", color = "Bias Type", fill = "Bias Type"
     ) +
     geom_vline(xintercept = mean(res$lambdas), color = "red")

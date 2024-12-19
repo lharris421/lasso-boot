@@ -10,12 +10,12 @@ params <- list(seed = 1234, iterations = 1000,
 for (i in 1:length(methods)) {
   methods[[i]]$method_arguments["alpha"] <- 0.2
 }
-methods <- methods[c("lasso_proj_boot")]
+methods <- methods[c("lasso_boot_reed")]
 
-ns <- c(50, 100, 400)
+ns <- c(1000)
 rhos <- NULL
 correlations <- NULL
-distributions <- c("laplace")
+distributions <- c("normal", "t", "beta", "uniform", "sparse 1")
 true_lambda <- NULL
 true_sigma2 <- NULL
 
@@ -110,6 +110,11 @@ for(k in 1:nrow(simulations)) {
     }
 
     setTxtProgressBar(pb,i)
+    bind_rows(extract_named_elements(res, "lasso_boot_reed")) %>% mutate(covered = lower <= truth & truth <= upper) %>%
+      pull(covered) %>% mean() %>% print()
+    # bind_rows(extract_named_elements(res, "lasso")) %>% mutate(covered = lower <= truth & truth <= upper) %>%
+    #   pull(covered) %>% mean() %>% print()
+
 
   }
 

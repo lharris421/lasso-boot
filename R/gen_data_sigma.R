@@ -40,7 +40,7 @@ gen_x <- function(n, p, rho, corr=c('exchangeable', 'autoregressive')) {
     sqrt(rho)*z + sqrt(1-rho) * matrix(rnorm(n*p), n, p)
   } else if (corr == 'autoregressive') {
     Z <- cbind(rnorm(n), matrix(rnorm(n*(p-1), sd=sqrt(1-rho^2)), n, p-1))
-    apply(Z, 1, filter, filter=rho, method='recursive') |> t()
+    apply(Z, 1, stats::filter, filter=rho, method='recursive') |> t()
   }
 }
 
